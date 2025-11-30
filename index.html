@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Database (Notion Style)</title>
+    <style>
+        :root {
+            --bg-color: #191919;
+            --card-bg: #202020;
+            --text-primary: #ffffff;
+            --text-secondary: #9b9b9b;
+            --border-color: #2f2f2f;
+            --hover-bg: #2c2c2c;
+            --input-bg: #252525;
+
+            /* Notion Colors for Pills */
+            --pill-gray: #37352f;
+            --pill-brown: #442a1e;
+            --pill-orange: #49291e;
+            --pill-yellow: #402c1b;
+            --pill-green: #1c3829;
+            --pill-blue: #183347;
+            --pill-purple: #242b42;
+            --pill-pink: #3c2436;
+            --pill-red: #422726;
+
+            --text-gray: #9b9a97;
+            --text-brown: #d9b8a0;
+            --text-orange: #d9b19c;
+            --text-yellow: #d9cb9c;
+            --text-green: #b7d9ce;
+            --text-blue: #b3d4ff;
+            --text-purple: #d5d9ff;
+            --text-pink: #fcdce8;
+            --text-red: #ffbdad;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--text-primary);
+        }
+
+        /* Form Styles */
+        .card {
+            background-color: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 0.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 0.5rem;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #4a90e2;
+        }
+
+        /* Custom Select Arrow */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239b9b9b%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.7rem top 50%;
+            background-size: 0.65rem auto;
+            padding-right: 2rem;
+        }
+
+        .btn-container {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        button {
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 3px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #2eaadc;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #258bb5;
+        }
+
+        .btn-secondary {
+            background-color: #474747;
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a5a5a;
+        }
+
+        /* Table Styles */
+        .table-wrapper {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--card-bg);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        th,
+        td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+        }
+
+        th:last-child,
+        td:last-child {
+            border-right: none;
+        }
+
+        th {
+            background-color: var(--card-bg);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        tr:hover td {
+            background-color: var(--hover-bg);
+        }
+
+        /* Pills */
+        .pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-right: 4px;
+            margin-bottom: 2px;
+        }
+
+        /* Pill Colors */
+        .pill-gray {
+            background: var(--pill-gray);
+            color: var(--text-gray);
+        }
+
+        .pill-brown {
+            background: var(--pill-brown);
+            color: var(--text-brown);
+        }
+
+        .pill-orange {
+            background: var(--pill-orange);
+            color: var(--text-orange);
+        }
+
+        .pill-yellow {
+            background: var(--pill-yellow);
+            color: var(--text-yellow);
+        }
+
+        .pill-green {
+            background: var(--pill-green);
+            color: var(--text-green);
+        }
+
+        .pill-blue {
+            background: var(--pill-blue);
+            color: var(--text-blue);
+        }
+
+        .pill-purple {
+            background: var(--pill-purple);
+            color: var(--text-purple);
+        }
+
+        .pill-pink {
+            background: var(--pill-pink);
+            color: var(--text-pink);
+        }
+
+        .pill-red {
+            background: var(--pill-red);
+            color: var(--text-red);
+        }
+
+        /* Actions */
+        .action-btn {
+            background: none;
+            border: none;
+            padding: 4px 8px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+            font-size: 1.1rem;
+        }
+
+        .action-btn:hover {
+            opacity: 1;
+        }
+
+        .btn-edit-icon {
+            color: var(--text-blue);
+        }
+
+        .btn-delete-icon {
+            color: var(--text-red);
+        }
+
+        .empty-state {
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Teacher Database</h1>
+
+        <!-- Form -->
+        <div class="card">
+            <h3 id="form-title"
+                style="margin-top: 0; color: var(--text-secondary); font-size: 0.9rem; text-transform: uppercase;">New
+                Entry</h3>
+            <form id="teacher-form">
+                <input type="hidden" id="teacher-id-hidden">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" id="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">Last Name</label>
+                        <input type="text" id="lastName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="department">Department</label>
+                        <select id="department" required>
+                            <option value="">Select Department</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="teacher-id">ID</label>
+                        <input type="text" id="teacher-id" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="hours">H/Week</label>
+                        <select id="hours" required>
+                            <option value="">Select Hours</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" required>
+                    </div>
+                </div>
+
+                <div class="form-grid" style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <label for="course1">Course 1</label>
+                        <select id="course1">
+                            <option value="">Select Course</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="course2">Course 2</label>
+                        <select id="course2">
+                            <option value="">Select Course</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="course3">Course 3</label>
+                        <select id="course3">
+                            <option value="">Select Course</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="course4">Course 4</label>
+                        <select id="course4">
+                            <option value="">Select Course</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="course5">Course 5</label>
+                        <select id="course5">
+                            <option value="">Select Course</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="btn-container">
+                    <button type="submit" class="btn-primary" id="submit-btn">Add Teacher</button>
+                    <button type="button" class="btn-secondary" id="cancel-btn" style="display: none;">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrapper">
+            <table id="teachers-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Last Name</th>
+                        <th>Department</th>
+                        <th>ID</th>
+                        <th>Course 1</th>
+                        <th>Course 2</th>
+                        <th>Course 3</th>
+                        <th>Course 4</th>
+                        <th>Course 5</th>
+                        <th>H/Week</th>
+                        <th>Email</th>
+                        <th style="width: 80px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="teachers-body">
+                    <!-- Rows populated by JS -->
+                </tbody>
+            </table>
+            <div id="empty-state" class="empty-state" style="display: none;">
+                No entries found.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const OPTIONS = {
+            departments: [
+                "Science",
+                "Mathematics",
+                "Literature",
+                "History",
+                "Art",
+                "Physical Education",
+                "Computer Science",
+                "Music"
+            ],
+            courses: [
+                "Algebra I",
+                "Geometry",
+                "Calculus",
+                "Physics",
+                "Chemistry",
+                "Biology",
+                "English Lit",
+                "Creative Writing",
+                "World History",
+                "US History",
+                "Art History",
+                "Painting",
+                "Gym",
+                "Health",
+                "Intro to CS",
+                "Web Development",
+                "Band",
+                "Choir"
+            ],
+            hoursPerWeek: [
+                "5", "10", "15", "20", "25", "30", "35", "40"
+            ]
+        };
+
+        // --- State ---
+        let teachers = [];
+        const STORAGE_KEY = 'notion_teacher_db_v2';
+
+        // Color palette for pills
+        const PILL_COLORS = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
+
+        // --- DOM Elements ---
+        const form = document.getElementById('teacher-form');
+        const formTitle = document.getElementById('form-title');
+        const submitBtn = document.getElementById('submit-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const tableBody = document.getElementById('teachers-body');
+        const emptyState = document.getElementById('empty-state');
+
+        // Inputs
+        const inputs = {
+            idHidden: document.getElementById('teacher-id-hidden'),
+            name: document.getElementById('name'),
+            lastName: document.getElementById('lastName'), // Renamed from person
+            department: document.getElementById('department'),
+            id: document.getElementById('teacher-id'),
+            hours: document.getElementById('hours'),
+            email: document.getElementById('email'),
+            course1: document.getElementById('course1'),
+            course2: document.getElementById('course2'),
+            course3: document.getElementById('course3'),
+            course4: document.getElementById('course4'),
+            course5: document.getElementById('course5'),
+        };
+
+        // --- Init ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeDropdowns();
+            loadData();
+            renderTable();
+        });
+
+        form.addEventListener('submit', handleSubmit);
+        cancelBtn.addEventListener('click', resetForm);
+
+        // --- Logic ---
+
+        function initializeDropdowns() {
+            // Helper to populate a select element
+            const populate = (selectElement, options) => {
+                options.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    option.textContent = opt;
+                    selectElement.appendChild(option);
+                });
+            };
+
+            populate(inputs.department, OPTIONS.departments);
+            populate(inputs.hours, OPTIONS.hoursPerWeek);
+
+            const courseSelects = [inputs.course1, inputs.course2, inputs.course3, inputs.course4, inputs.course5];
+            courseSelects.forEach(select => populate(select, OPTIONS.courses));
+        }
+
+        function loadData() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                try {
+                    teachers = JSON.parse(data);
+                } catch (e) {
+                    console.error("Data parse error", e);
+                    teachers = [];
+                }
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(teachers));
+            renderTable();
+        }
+
+        function getPillColor(text) {
+            if (!text) return 'gray';
+            let hash = 0;
+            for (let i = 0; i < text.length; i++) {
+                hash = text.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const index = Math.abs(hash) % PILL_COLORS.length;
+            return PILL_COLORS[index];
+        }
+
+        function renderPill(text) {
+            if (!text) return '';
+            const color = getPillColor(text);
+            return `<span class="pill pill-${color}">${text}</span>`;
+        }
+
+        function renderTable() {
+            tableBody.innerHTML = '';
+
+            if (teachers.length === 0) {
+                emptyState.style.display = 'block';
+                return;
+            }
+            emptyState.style.display = 'none';
+
+            teachers.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                <td style="font-weight: 500;">${t.name}</td>
+                <td>${t.lastName || t.person || ''}</td> <!-- Handle legacy data -->
+                <td>${renderPill(t.department)}</td>
+                <td style="font-family: monospace;">${t.teacherId}</td>
+                <td>${renderPill(t.course1)}</td>
+                <td>${renderPill(t.course2)}</td>
+                <td>${renderPill(t.course3)}</td>
+                <td>${renderPill(t.course4)}</td>
+                <td>${renderPill(t.course5)}</td>
+                <td>${t.hours}</td>
+                <td><a href="mailto:${t.email}" style="color: var(--text-blue); text-decoration: none;">${t.email}</a></td>
+                <td>
+                    <button class="action-btn btn-edit-icon" onclick="editTeacher('${t.uuid}')" title="Edit">✎</button>
+                    <button class="action-btn btn-delete-icon" onclick="deleteTeacher('${t.uuid}')" title="Delete">🗑</button>
+                </td>
+            `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        function handleSubmit(e) {
+            e.preventDefault();
+
+            const formData = {
+                name: inputs.name.value.trim(),
+                lastName: inputs.lastName.value.trim(),
+                department: inputs.department.value,
+                teacherId: inputs.id.value.trim(),
+                hours: inputs.hours.value,
+                email: inputs.email.value.trim(),
+                course1: inputs.course1.value,
+                course2: inputs.course2.value,
+                course3: inputs.course3.value,
+                course4: inputs.course4.value,
+                course5: inputs.course5.value,
+            };
+
+            const uuid = inputs.idHidden.value;
+
+            if (uuid) {
+                updateTeacher(uuid, formData);
+            } else {
+                addTeacher(formData);
+            }
+
+            resetForm();
+        }
+
+        function addTeacher(data) {
+            teachers.push({
+                uuid: Date.now().toString(),
+                ...data
+            });
+            saveData();
+        }
+
+        function updateTeacher(uuid, data) {
+            const index = teachers.findIndex(t => t.uuid === uuid);
+            if (index !== -1) {
+                teachers[index] = { ...teachers[index], ...data };
+                saveData();
+            }
+        }
+
+        window.deleteTeacher = function (uuid) {
+            if (confirm('Delete this entry?')) {
+                teachers = teachers.filter(t => t.uuid !== uuid);
+                saveData();
+                if (inputs.idHidden.value === uuid) resetForm();
+            }
+        };
+
+        window.editTeacher = function (uuid) {
+            const t = teachers.find(t => t.uuid === uuid);
+            if (!t) return;
+
+            inputs.idHidden.value = t.uuid;
+            inputs.name.value = t.name;
+            inputs.lastName.value = t.lastName || t.person || ''; // Handle legacy
+            inputs.department.value = t.department;
+            inputs.id.value = t.teacherId;
+            inputs.hours.value = t.hours;
+            inputs.email.value = t.email;
+            inputs.course1.value = t.course1;
+            inputs.course2.value = t.course2;
+            inputs.course3.value = t.course3;
+            inputs.course4.value = t.course4;
+            inputs.course5.value = t.course5;
+
+            formTitle.textContent = 'Edit Entry';
+            submitBtn.textContent = 'Update';
+            cancelBtn.style.display = 'block';
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        function resetForm() {
+            form.reset();
+            inputs.idHidden.value = '';
+            formTitle.textContent = 'New Entry';
+            submitBtn.textContent = 'Add Teacher';
+            cancelBtn.style.display = 'none';
+        }
+    </script>
+
+</body>
+
+</html>
