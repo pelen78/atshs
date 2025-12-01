@@ -373,6 +373,18 @@
             background-color: rgba(0, 0, 0, 0.02);
         }
 
+        /* 👉 sortable headers */
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th.sortable span.sort-indicator {
+            font-size: 0.75rem;
+            margin-left: 4px;
+            opacity: 0.7;
+        }
+
         /* Forum Specific */
         .forum-topic {
             cursor: pointer;
@@ -456,11 +468,33 @@
             color: var(--text-secondary);
         }
 
+        /* 👉 Toast message */
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translate(-50%, 10px);
+            background: var(--ats-navy);
+            color: #fff;
+            padding: 0.6rem 1.4rem;
+            border-radius: 999px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+            font-size: 0.9rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            z-index: 3000;
+        }
+
+        #toast.show {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+
         /* ========================================
            RESPONSIVE DESIGN - MOBILE STYLES
            ======================================== */
 
-        /* Tablets and smaller (max-width: 768px) */
         @media (max-width: 768px) {
             .mobile-menu-toggle {
                 display: flex;
@@ -524,7 +558,6 @@
             }
         }
 
-        /* Small phones (max-width: 480px) */
         @media (max-width: 480px) {
             #main-content {
                 padding: 0.75rem;
@@ -572,7 +605,6 @@
             }
         }
 
-        /* Landscape phones */
         @media (max-height: 500px) and (orientation: landscape) {
             .login-card {
                 max-height: 90vh;
@@ -717,17 +749,39 @@
                     <table id="staffing-table">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Last Name</th>
-                                <th>Dept</th>
-                                <th>ID</th>
-                                <th>Course 1</th>
-                                <th>Course 2</th>
-                                <th>Course 3</th>
-                                <th>Course 4</th>
-                                <th>Course 5</th>
-                                <th>H/Week</th>
-                                <th>Email</th>
+                                <th class="sortable" onclick="Staffing.sortBy('name')">
+                                    Name <span class="sort-indicator">⇅</span>
+                                </th>
+                                <th class="sortable" onclick="Staffing.sortBy('lastName')">
+                                    Last Name <span class="sort-indicator">⇅</span>
+                                </th>
+                                <th class="sortable" onclick="Staffing.sortBy('department')">
+                                    Dept <span class="sort-indicator">⇅</span>
+                                </th>
+                                <th class="sortable" onclick="Staffing.sortBy('teacherId')">
+                                    ID <span class="sort-indicator">⇅</span>
+                                </th>
+                                <th class="sortable" onclick="Staffing.sortBy('course1')">
+                                    Course 1 <span class="sort-indicator">⇅</span>
+                                </th>
+                                <th class="sortable" onclick="Staffing.sortBy('course2')">
+                                    Course 2 <span class="sort-indicator">⇅</span>
+                                </th>
+                                <th class="sortable" onclick="Staffing.sortBy('course3')">
+                                    Course 3 <span class="sort-indicator">⇅</span>
+                                </th>
+                                <th class="sortable" onclick="Staffing.sortBy('course4')">
+                                    Course 4 <span class="sort-indicator">⇅</span>
+                                </th>
+                                <th class="sortable" onclick="Staffing.sortBy('course5')">
+                                    Course 5 <span class="sort-indicator">⇅</span>
+                                </th>
+                                <th class="sortable" onclick="Staffing.sortBy('hoursPerWeek')">
+                                    H/Week <span class="sort-indicator">⇅</span>
+                                </th>
+                                <th class="sortable" onclick="Staffing.sortBy('email')">
+                                    Email <span class="sort-indicator">⇅</span>
+                                </th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -749,6 +803,9 @@
         </div>
     </div>
 
+    <!-- 👉 Toast element -->
+    <div id="toast"></div>
+
     <script>
         // URL del Web App de Google Apps Script
         const SHEET_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwO8_NjMvoEoclGIAk659qktJermMe58pXfO2-w4UMmudIo-HURBXUcLC_PVukcae4ztQ/exec';
@@ -764,6 +821,17 @@
             }).catch(err => {
                 console.error('Error sending to sheet', err);
             });
+        }
+
+        // 👉 Toast helper
+        function showToast(message) {
+            const el = document.getElementById('toast');
+            if (!el) return;
+            el.textContent = message;
+            el.classList.add('show');
+            setTimeout(() => {
+                el.classList.remove('show');
+            }, 2000);
         }
 
         // --- Constants & Config ---
@@ -1314,13 +1382,30 @@
                     "Science", "Mathematics", "Literature", "History",
                     "Art", "Physical Education", "Computer Science", "Music"
                 ],
-                courses: [
+            courses: [
                     "Algebra I", "Geometry", "Calculus", "Physics", "Chemistry",
                     "Biology", "English Lit", "Creative Writing", "World History",
                     "US History", "Art History", "Painting", "Gym", "Health",
                     "Intro to CS", "Web Development", "Band", "Choir"
                 ],
                 hoursPerWeek: ["25%", "50%", "75%", "100%"]
+            },
+
+            // 👉 estado de ordenamiento
+            sortConfig: {
+                key: 'name',
+                direction: 'asc'
+            },
+
+            sortBy(key) {
+                if (this.sortConfig.key === key) {
+                    // toggle asc/desc
+                    this.sortConfig.direction = this.sortConfig.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortConfig.key = key;
+                    this.sortConfig.direction = 'asc';
+                }
+                this.render();
             },
 
             getOptions() {
@@ -1331,8 +1416,20 @@
             },
 
             render() {
-                const list = Store.get('staffingData', []);
+                const listRaw = Store.get('staffingData', []);
                 const tbody = document.getElementById('staffing-body');
+
+                // 👉 aplicamos sort antes de pintar
+                const list = [...listRaw];
+                const { key, direction } = this.sortConfig;
+
+                list.sort((a, b) => {
+                    const va = (a[key] ?? '').toString().toLowerCase();
+                    const vb = (b[key] ?? '').toString().toLowerCase();
+                    if (va < vb) return direction === 'asc' ? -1 : 1;
+                    if (va > vb) return direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
 
                 const headerBtnContainer = document.querySelector('#section-staffing .section-header');
                 const existingBtns = headerBtnContainer.querySelectorAll('button');
@@ -1460,50 +1557,52 @@
                     </form>
                 `;
             },
-save(e, id) {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const data = Store.get('staffingData', []);
-    const newItem = {
-        id: id || Date.now(),
-        name: formData.get('name'),
-        lastName: formData.get('lastName'),
-        department: formData.get('department'),
-        teacherId: formData.get('teacherId'),
-        hoursPerWeek: formData.get('hoursPerWeek'),
-        email: formData.get('email'),
-        course1: formData.get('course1'),
-        course2: formData.get('course2'),
-        course3: formData.get('course3'),
-        course4: formData.get('course4'),
-        course5: formData.get('course5')
-    };
 
-    if (id) {
-        const idx = data.findIndex(x => x.id === id);
-        data[idx] = newItem;
-    } else {
-        data.push(newItem);
-    }
-    Store.set('staffingData', data);
+            save(e, id) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = Store.get('staffingData', []);
+                const newItem = {
+                    id: id || Date.now(),
+                    name: formData.get('name'),
+                    lastName: formData.get('lastName'),
+                    department: formData.get('department'),
+                    teacherId: formData.get('teacherId'),
+                    hoursPerWeek: formData.get('hoursPerWeek'),
+                    email: formData.get('email'),
+                    course1: formData.get('course1'),
+                    course2: formData.get('course2'),
+                    course3: formData.get('course3'),
+                    course4: formData.get('course4'),
+                    course5: formData.get('course5')
+                };
 
-    // 👉 aquí es donde se manda al Apps Script
-    sendTeacherToSheet(newItem);
+                if (id) {
+                    const idx = data.findIndex(x => x.id === id);
+                    data[idx] = newItem;
+                } else {
+                    data.push(newItem);
+                }
+                Store.set('staffingData', data);
 
-    App.closeModal();
-    this.render();
-    Directory.render();
-},
+                // 👉 mandar al Apps Script
+                sendTeacherToSheet(newItem);
 
+                App.closeModal();
+                this.render();
+                Directory.render();
 
+                // 👉 toast de confirmación
+                showToast('Teacher saved & sent to Staffing Sheet');
+            },
 
-            
             delete(id) {
                 if (!confirm('Delete this teacher?')) return;
                 const data = Store.get('staffingData', []).filter(x => x.id !== id);
                 Store.set('staffingData', data);
                 this.render();
                 Directory.render();
+                showToast('Teacher deleted');
             },
 
             openSettings() {
@@ -1603,5 +1702,3 @@ save(e, id) {
 </body>
 
 </html>
-
-
