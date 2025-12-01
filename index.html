@@ -835,34 +835,34 @@
         }
 
         // --- Sync desde Google Sheet hacia la app ---
-let staffingLoadedFromSheet = false;
+        let staffingLoadedFromSheet = false;
 
-function loadStaffingFromSheet() {
-    if (staffingLoadedFromSheet) return;
+        function loadStaffingFromSheet() {
+            if (staffingLoadedFromSheet) return;
 
-    fetch(SHEET_WEBAPP_URL)
-        .then(res => res.json())
-        .then(data => {
-            const list = Array.isArray(data) ? data : data.data;
+            fetch(SHEET_WEBAPP_URL)
+                .then(res => res.json())
+                .then(data => {
+                    const list = Array.isArray(data) ? data : data.data;
 
-            if (Array.isArray(list)) {
-                Store.set('staffingData', list);
-                staffingLoadedFromSheet = true;
+                    if (Array.isArray(list)) {
+                        Store.set('staffingData', list);
+                        staffingLoadedFromSheet = true;
 
-                if (typeof Staffing !== 'undefined') {
-                    Staffing.render();
-                }
-                if (typeof Directory !== 'undefined') {
-                    Directory.render();
-                }
-            } else {
-                console.warn('Unexpected data format from Sheet:', data);
-            }
-        })
-        .catch(err => console.error('Error loading staffing from Sheet', err));
-}
+                        if (typeof Staffing !== 'undefined') {
+                            Staffing.render();
+                        }
+                        if (typeof Directory !== 'undefined') {
+                            Directory.render();
+                        }
+                    } else {
+                        console.warn('Unexpected data format from Sheet:', data);
+                    }
+                })
+                .catch(err => console.error('Error loading staffing from Sheet', err));
+        }
 
-        
+
         // --- Constants & Config ---
         const ROLES = { ADMIN: 'admin', TEACHER: 'teacher' };
         const SECTIONS = ['directory', 'dates', 'news', 'tutorials', 'forum', 'staffing'];
@@ -1002,21 +1002,21 @@ function loadStaffingFromSheet() {
                 }
             },
 
-     loadSectionData(section) {
-    // 👉 Cuando se usa directory o staffing, sincronizamos desde el Sheet
-    if (section === 'directory' || section === 'staffing') {
-        loadStaffingFromSheet();
-    }
+            loadSectionData(section) {
+                // 👉 Cuando se usa directory o staffing, sincronizamos desde el Sheet
+                if (section === 'directory' || section === 'staffing') {
+                    loadStaffingFromSheet();
+                }
 
-    switch (section) {
-        case 'directory': Directory.render(); break;
-        case 'dates': Dates.render(); break;
-        case 'news': News.render(); break;
-        case 'tutorials': Tutorials.render(); break;
-        case 'forum': Forum.renderTopics(); break;
-        case 'staffing': if (Auth.isAdmin()) Staffing.render(); break;
-    }
-}
+                switch (section) {
+                    case 'directory': Directory.render(); break;
+                    case 'dates': Dates.render(); break;
+                    case 'news': News.render(); break;
+                    case 'tutorials': Tutorials.render(); break;
+                    case 'forum': Forum.renderTopics(); break;
+                    case 'staffing': if (Auth.isAdmin()) Staffing.render(); break;
+                }
+            },  // 👈 aquí va la coma que faltaba
 
             openModal(type, id = null) {
                 const modal = document.getElementById('modal-overlay');
@@ -1416,7 +1416,7 @@ function loadStaffingFromSheet() {
                     "Science", "Mathematics", "Literature", "History",
                     "Art", "Physical Education", "Computer Science", "Music"
                 ],
-            courses: [
+                courses: [
                     "Algebra I", "Geometry", "Calculus", "Physics", "Chemistry",
                     "Biology", "English Lit", "Creative Writing", "World History",
                     "US History", "Art History", "Painting", "Gym", "Health",
@@ -1736,4 +1736,3 @@ function loadStaffingFromSheet() {
 </body>
 
 </html>
-
