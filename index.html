@@ -834,6 +834,35 @@
             }, 2000);
         }
 
+        // --- Sync desde Google Sheet hacia la app ---
+let staffingLoadedFromSheet = false;
+
+function loadStaffingFromSheet() {
+    if (staffingLoadedFromSheet) return;
+
+    fetch(SHEET_WEBAPP_URL)
+        .then(res => res.json())
+        .then(data => {
+            const list = Array.isArray(data) ? data : data.data;
+
+            if (Array.isArray(list)) {
+                Store.set('staffingData', list);
+                staffingLoadedFromSheet = true;
+
+                if (typeof Staffing !== 'undefined') {
+                    Staffing.render();
+                }
+                if (typeof Directory !== 'undefined') {
+                    Directory.render();
+                }
+            } else {
+                console.warn('Unexpected data format from Sheet:', data);
+            }
+        })
+        .catch(err => console.error('Error loading staffing from Sheet', err));
+}
+
+        
         // --- Constants & Config ---
         const ROLES = { ADMIN: 'admin', TEACHER: 'teacher' };
         const SECTIONS = ['directory', 'dates', 'news', 'tutorials', 'forum', 'staffing'];
@@ -973,16 +1002,21 @@
                 }
             },
 
-            loadSectionData(section) {
-                switch (section) {
-                    case 'directory': Directory.render(); break;
-                    case 'dates': Dates.render(); break;
-                    case 'news': News.render(); break;
-                    case 'tutorials': Tutorials.render(); break;
-                    case 'forum': Forum.renderTopics(); break;
-                    case 'staffing': if (Auth.isAdmin()) Staffing.render(); break;
-                }
-            },
+     loadSectionData(section) {
+    // 👉 Cuando se usa directory o staffing, sincronizamos desde el Sheet
+    if (section === 'directory' || section === 'staffing') {
+        loadStaffingFromSheet();
+    }
+
+    switch (section) {
+        case 'directory': Directory.render(); break;
+        case 'dates': Dates.render(); break;
+        case 'news': News.render(); break;
+        case 'tutorials': Tutorials.render(); break;
+        case 'forum': Forum.renderTopics(); break;
+        case 'staffing': if (Auth.isAdmin()) Staffing.render(); break;
+    }
+}
 
             openModal(type, id = null) {
                 const modal = document.getElementById('modal-overlay');
@@ -1702,3 +1736,4 @@
 </body>
 
 </html>
+
