@@ -1460,41 +1460,44 @@
                     </form>
                 `;
             },
+save(e, id) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Store.get('staffingData', []);
+    const newItem = {
+        id: id || Date.now(),
+        name: formData.get('name'),
+        lastName: formData.get('lastName'),
+        department: formData.get('department'),
+        teacherId: formData.get('teacherId'),
+        hoursPerWeek: formData.get('hoursPerWeek'),
+        email: formData.get('email'),
+        course1: formData.get('course1'),
+        course2: formData.get('course2'),
+        course3: formData.get('course3'),
+        course4: formData.get('course4'),
+        course5: formData.get('course5')
+    };
 
-            save(e, id) {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const data = Store.get('staffingData', []);
-                const newItem = {
-                    id: id || Date.now(),
-                    name: formData.get('name'),
-                    lastName: formData.get('lastName'),
-                    department: formData.get('department'),
-                    teacherId: formData.get('teacherId'),
-                    hoursPerWeek: formData.get('hoursPerWeek'),
-                    email: formData.get('email'),
-                    course1: formData.get('course1'),
-                    course2: formData.get('course2'),
-                    course3: formData.get('course3'),
-                    course4: formData.get('course4'),
-                    course5: formData.get('course5')
-                };
-                if (id) {
-                    const idx = data.findIndex(x => x.id === id);
-                    data[idx] = newItem;
-                } else {
-                    data.push(newItem);
-                }
-                Store.set('staffingData', data);
+    if (id) {
+        const idx = data.findIndex(x => x.id === id);
+        data[idx] = newItem;
+    } else {
+        data.push(newItem);
+    }
+    Store.set('staffingData', data);
 
-                // mandar al Google Sheet
-                sendTeacherToSheet(newItem);
+    // 👉 aquí es donde se manda al Apps Script
+    sendTeacherToSheet(newItem);
 
-                App.closeModal();
-                this.render();
-                Directory.render();
-            },
+    App.closeModal();
+    this.render();
+    Directory.render();
+},
 
+
+
+            
             delete(id) {
                 if (!confirm('Delete this teacher?')) return;
                 const data = Store.get('staffingData', []).filter(x => x.id !== id);
@@ -1600,4 +1603,5 @@
 </body>
 
 </html>
+
 
