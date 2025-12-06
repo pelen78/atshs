@@ -651,9 +651,6 @@
                 <li class="nav-item active" data-section="directory">
                     <span>👥</span> Teacher Directory
                 </li>
-                <li class="nav-item" data-section="dates">
-                    <span>📅</span> Important Dates
-                </li>
                 <li class="nav-item" data-section="news">
                     <span>📰</span> News
                 </li>
@@ -685,15 +682,6 @@
                 <div id="directory-list" class="card-grid"></div>
             </section>
 
-            <!-- 2. Important Dates -->
-            <section id="section-dates" class="content-section hidden">
-                <div class="section-header">
-                    <h2 class="section-title">Important Dates</h2>
-                    <button class="btn btn-primary admin-only hidden" onclick="App.openModal('dates')">+ Add
-                        Event</button>
-                </div>
-                <div id="dates-list"></div>
-            </section>
 
             <!-- 3. News -->
             <section id="section-news" class="content-section hidden">
@@ -947,7 +935,7 @@
 
         // --- Constants & Config ---
         const ROLES = { ADMIN: 'admin', TEACHER: 'teacher' };
-        const SECTIONS = ['directory', 'dates', 'news', 'tutorials', 'forum', 'staffing'];
+        const SECTIONS = ['directory', 'news', 'tutorials', 'forum', 'staffing'];
 
         // --- Mobile Menu Toggle ---
         function toggleMobileMenu() {
