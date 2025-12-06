@@ -797,7 +797,28 @@
 
     <script>
         // URL del Web App de Google Apps Script
-        const SHEET_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbx4R8sArdc2DtNnLKRirJ2rz3_fQyrqs3_pQ0JTv2x4s23ork8vUGmkAnewIx1bfac_xQ/exec';
+        const SHEET_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwYs9Wj_hkAyLdpWrNtHj8DVLKLdh4vSXGDMBRnNuhbmsi4E3Z7BofhoWxwx6-YNQjlhw/exec';
+        // --- Helpers News (sanear texto y formatear fecha) ---
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatNewsDate(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            if (isNaN(date)) return value;
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit'
+            });
+        }
 
         // 👉 Enviar maestro al Sheet (UPSERT)
         function sendTeacherToSheet(teacher) {
@@ -1270,76 +1291,71 @@
         };
 
         // 3. News
+        // 3. News (desde Google Sheet)
         const News = {
-            render() {
-                const list = Store.get('news', []);
+            items: [],
+            loaded: false,
+
+            async render() {
                 const container = document.getElementById('news-list');
-                container.innerHTML = list.map(n => `
-                    <div class="card">
-                        <div class="flex-between">
-                            <div>
-                                <h3>${n.title}</h3>
-                                <p class="text-muted">${n.date}</p>
-                                <p>${n.body || ''}</p>
+                if (!container) return;
+
+                container.innerHTML = '<p class="text-muted">Loading news...</p>';
+
+                try {
+                    if (!this.loaded) {
+                        const res = await fetch(SHEET_WEBAPP_URL + '?action=getNews');
+                        const data = await res.json();
+                        this.items = Array.isArray(data) ? data : [];
+                        this.loaded = true;
+                    }
+
+                    // Ordenar por fecha (más reciente primero)
+                    const list = [...this.items].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                    if (!list.length) {
+                        container.innerHTML = '<p class="text-muted">No news yet.</p>';
+                        return;
+                    }
+
+                    container.innerHTML = list.map(n => {
+                        const dateStr = formatNewsDate(n.date);
+                        const hasImage = n.imageUrl && n.imageUrl.trim() !== '';
+
+                        return `
+                    <div class="card" style="display:flex; gap:16px; align-items:flex-start;">
+                        ${hasImage ? `
+                            <div style="flex:0 0 160px;">
+                                <img src="${n.imageUrl}" alt="${escapeHtml(n.title)}"
+                                     style="width:100%;height:100px;object-fit:cover;border-radius:6px;">
                             </div>
-                            ${Auth.isAdmin() ? `
-                                <div>
-                                    <button class="btn btn-sm btn-secondary" onclick="App.openModal('news', ${n.id})">Edit</button>
-                                    <button class="btn btn-sm btn-danger" onclick="News.delete(${n.id})">Del</button>
-                                </div>
-                            ` : ''}
+                        ` : ''}
+                        <div>
+                            <h3>${escapeHtml(n.title)}</h3>
+                            ${dateStr ? `<p class="text-muted">${dateStr}</p>` : ''}
+                            ${n.summary ? `<p>${escapeHtml(n.summary)}</p>` : ''}
                         </div>
                     </div>
-                `).join('');
-            },
-            renderForm(container, id) {
-                const item = id ? Store.get('news', []).find(x => x.id === id) : {};
-                document.getElementById('modal-title').textContent = id ? 'Edit News' : 'Add News';
-                container.innerHTML = `
-                    <form onsubmit="News.save(event, ${id})">
-                        <div class="form-group">
-                            <label class="form-label">Title</label>
-                            <input class="form-control" name="title" value="${item?.title || ''}" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Date</label>
-                            <input type="date" class="form-control" name="date" value="${item?.date || ''}" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Body</label>
-                            <textarea class="form-control" name="body" rows="4">${item?.body || ''}</textarea>
-                        </div>
-                        <button class="btn btn-primary">Save</button>
-                    </form>
                 `;
-            },
-            save(e, id) {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const data = Store.get('news', []);
-                const newItem = {
-                    id: id || Date.now(),
-                    title: formData.get('title'),
-                    date: formData.get('date'),
-                    body: formData.get('body')
-                };
-                if (id) {
-                    const idx = data.findIndex(x => x.id === id);
-                    data[idx] = newItem;
-                } else {
-                    data.push(newItem);
+                    }).join('');
+                } catch (err) {
+                    console.error('Error loading news from Sheet', err);
+                    container.innerHTML = '<p class="text-muted">Error loading news.</p>';
                 }
-                Store.set('news', data);
-                App.closeModal();
-                this.render();
             },
-            delete(id) {
-                if (!confirm('Delete?')) return;
-                const data = Store.get('news', []).filter(x => x.id !== id);
-                Store.set('news', data);
-                this.render();
-            }
+
+            // Stubs para que el botón "+ Post News" no truene si alguien lo llegara a usar
+            renderForm(container, id) {
+                document.getElementById('modal-title').textContent = 'School News';
+                container.innerHTML = `
+            <p>News can now be edited directly in the <strong>News_DB</strong> Google Sheet.</p>
+            <p>This form is disabled.</p>
+        `;
+            },
+            save() { /* no-op */ },
+            delete() { /* no-op */ }
         };
+
 
         // 4. Tutorials
         const Tutorials = {
