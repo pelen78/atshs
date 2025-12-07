@@ -1036,6 +1036,54 @@
             });
         }
 
+        // --- Enrollment Helpers (Sync) ---
+        let enrollmentLoadedFromSheet = false;
+
+        function loadEnrollmentFromSheet(force = false) {
+            if (enrollmentLoadedFromSheet && !force) {
+                return Promise.resolve(null);
+            }
+
+            return fetch(SHEET_WEBAPP_URL + '?action=getEnrollment')
+                .then(res => res.json())
+                .then(data => {
+                    if (!data) return null;
+
+                    const enrollment = {
+                        9: Number(data.Grade9) || 0,
+                        10: Number(data.Grade10) || 0,
+                        11: Number(data.Grade11) || 0,
+                        12: Number(data.Grade12) || 0
+                    };
+
+                    Store.set('enrollment', enrollment);
+                    enrollmentLoadedFromSheet = true;
+                    return enrollment;
+                })
+                .catch(err => {
+                    console.error('Error fetching enrollment from sheet', err);
+                    return null;
+                });
+        }
+
+        function saveEnrollmentToSheet(enrollment) {
+            const payload = {
+                action: 'saveEnrollment',
+                Grade9: enrollment[9] || 0,
+                Grade10: enrollment[10] || 0,
+                Grade11: enrollment[11] || 0,
+                Grade12: enrollment[12] || 0
+            };
+
+            fetch(SHEET_WEBAPP_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).catch(err => {
+                console.error('Error saving enrollment', err);
+            });
+        }
+
 
 
         // --- Constants & Config ---
@@ -1532,14 +1580,25 @@
             },
 
             renderEnrollment() {
-                const data = Store.get('enrollment', { 9: 0, 10: 0, 11: 0, 12: 0 });
+                const local = Store.get('enrollment', { 9: 0, 10: 0, 11: 0, 12: 0 });
 
-                document.getElementById('enrollment-9').value = data[9];
-                document.getElementById('enrollment-10').value = data[10];
-                document.getElementById('enrollment-11').value = data[11];
-                document.getElementById('enrollment-12').value = data[12];
+                // Set UI from local cache immediately
+                document.getElementById('enrollment-9').value = local[9];
+                document.getElementById('enrollment-10').value = local[10];
+                document.getElementById('enrollment-11').value = local[11];
+                document.getElementById('enrollment-12').value = local[12];
 
-                this.calculateTotal(data);
+                this.calculateTotal(local);
+
+                // Refresh from Sheet (if newer)
+                loadEnrollmentFromSheet().then(remote => {
+                    if (!remote) return;
+                    document.getElementById('enrollment-9').value = remote[9];
+                    document.getElementById('enrollment-10').value = remote[10];
+                    document.getElementById('enrollment-11').value = remote[11];
+                    document.getElementById('enrollment-12').value = remote[12];
+                    this.calculateTotal(remote);
+                });
             },
 
             updateEnrollmentTotal() {
@@ -1552,6 +1611,9 @@
 
                 Store.set('enrollment', data);
                 this.calculateTotal(data);
+
+                // Sync to Sheet
+                saveEnrollmentToSheet(data);
             },
 
             calculateTotal(data) {
