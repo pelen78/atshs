@@ -2240,4 +2240,118 @@
                             </div>
                         </div>
 
-       
+                        <!-- Courses Column -->
+                        <div style="flex: 1; min-width: 250px;">
+                            <h4 style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Courses</h4>
+                            <div class="form-group" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                                <select id="new-course-grade" class="form-control" style="width: 80px;">
+                                    ${grades.map(g => `<option value="${g}">${g}</option>`).join('')}
+                                </select>
+                                <input id="new-course" class="form-control" placeholder="New Course">
+                                <button class="btn btn-primary" onclick="Staffing.addOption('courses')">Add</button>
+                            </div>
+                            <div style="max-height: 400px; overflow-y: auto;">
+                                ${coursesHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            addOption(type) {
+                const options = this.getOptions();
+
+                if (type === 'departments') {
+                    const input = document.getElementById('new-dept');
+                    const val = input.value.trim();
+                    if (!val) return;
+                    options.departments.push(val);
+                    options.departments.sort();
+                } else if (type === 'courses') {
+                    const gradeInput = document.getElementById('new-course-grade');
+                    const nameInput = document.getElementById('new-course');
+                    const grade = gradeInput.value;
+                    const val = nameInput.value.trim();
+
+                    if (!val) return;
+                    if (!options.coursesByGrade[grade]) options.coursesByGrade[grade] = [];
+                    options.coursesByGrade[grade].push(val);
+                    options.coursesByGrade[grade].sort();
+                }
+
+                Store.set('options', options);
+                saveOptionsToSheet(options); // 👈 manda catálogos al Sheet
+                this.renderSettings(document.getElementById('modal-body'));
+            },
+
+            deleteOption(type, index, grade = null) {
+                if (!confirm('Delete this option?')) return;
+                const options = this.getOptions();
+
+                if (type === 'departments') {
+                    options.departments.splice(index, 1);
+                } else if (type === 'courses' && grade) {
+                    options.coursesByGrade[grade].splice(index, 1);
+                }
+
+                Store.set('options', options);
+                saveOptionsToSheet(options); // 👈 manda cambios al Sheet
+                this.renderSettings(document.getElementById('modal-body'));
+            },
+
+            editOption(type, index, grade = null) {
+                const options = this.getOptions();
+                let current = '';
+
+                if (type === 'departments') {
+                    current = options.departments[index];
+                } else {
+                    current = options.coursesByGrade[grade][index];
+                }
+
+                const newVal = prompt('Edit name:', current);
+                if (newVal && newVal.trim() !== '') {
+                    if (type === 'departments') {
+                        const newName = newVal.trim();
+                        options.departments[index] = newName;
+                        options.departments.sort();
+                    } else {
+                        const newName = newVal.trim();
+                        let newGrade = grade;
+
+                        const gradeInput = prompt('Confirm Grade (9, 10, 11, 12):', grade);
+                        if (gradeInput && ["9", "10", "11", "12", "E"].includes(gradeInput)) {
+                            newGrade = gradeInput;
+                        }
+
+                        if (newGrade !== grade) {
+                            // mover de un grado a otro
+                            options.coursesByGrade[grade].splice(index, 1);
+                            if (!options.coursesByGrade[newGrade]) options.coursesByGrade[newGrade] = [];
+                            options.coursesByGrade[newGrade].push(newName);
+                            options.coursesByGrade[newGrade].sort();
+                        } else {
+                            // solo cambiar el nombre
+                            options.coursesByGrade[grade][index] = newName;
+                            options.coursesByGrade[grade].sort();
+                        }
+                    }
+
+                    Store.set('options', options);
+                    saveOptionsToSheet(options); // 👈 también guardamos en Sheet
+                    this.renderSettings(document.getElementById('modal-body'));
+                }
+            }
+        };
+
+        // Initialize App
+        App.init();
+
+        // Force refresh Data render to apply defaults if we are on that section, or generic re-render might suffice
+        // But App.init() -> showDashboard calls navigate which renders data if active.
+        // We will make sure to expose Data globally if needed, which it is (const Data).
+    </script>
+
+</body>
+
+</html>
