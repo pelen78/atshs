@@ -401,6 +401,16 @@
             margin-top: 0.5rem;
         }
 
+        /* ATS Navy Titles */
+        .section-title,
+        .card h3,
+        .card h4,
+        h4,
+        /* Targeting the specific headers in Data cards if generic */
+        .ats-navy-title {
+            color: var(--ats-navy) !important;
+        }
+
         .reply-card {
             border-left: 3px solid var(--ats-red);
             margin-left: 1rem;
@@ -775,6 +785,18 @@
                                 <th class="sortable" onclick="Staffing.sortBy('email')">
                                     Email <span class="sort-indicator">⇅</span>
                                 </th>
+                                <th class="sortable" onclick="Staffing.sortBy('adminW')">
+                                    Admin W. <span class="sort-indicator">⇅</span>
+                                </th>
+                                <th class="sortable" onclick="Staffing.sortBy('coordCouns')">
+                                    Coord./Couns <span class="sort-indicator">⇅</span>
+                                </th>
+                                <th class="sortable" onclick="Staffing.sortBy('advCoAdv')">
+                                    Adv/Co-Adv <span class="sort-indicator">⇅</span>
+                                </th>
+                                <th class="sortable" onclick="Staffing.sortBy('headDept')">
+                                    Head Dept. <span class="sort-indicator">⇅</span>
+                                </th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -834,8 +856,12 @@
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th>Teacher</th>
-                                            <th>Total Groups</th>
+                                            <th class="sortable" onclick="Data.sortTeachersBy('name')">
+                                                Teacher <span class="sort-indicator">⇅</span>
+                                            </th>
+                                            <th class="sortable" onclick="Data.sortTeachersBy('groups')">
+                                                Total Groups <span class="sort-indicator">⇅</span>
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody id="data-teachers-body"></tbody>
@@ -851,8 +877,12 @@
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th>Subject</th>
-                                            <th>Total Groups</th>
+                                            <th class="sortable" onclick="Data.sortSubjectsBy('subject')">
+                                                Subject <span class="sort-indicator">⇅</span>
+                                            </th>
+                                            <th class="sortable" onclick="Data.sortSubjectsBy('count')">
+                                                Total Groups <span class="sort-indicator">⇅</span>
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody id="data-subjects-body"></tbody>
@@ -1339,6 +1369,11 @@
                             <p><strong>Teacher ID:</strong> ${t.teacherId || '-'}</p>
                             <p><strong>Hours/Week:</strong> ${t.hoursPerWeek || '-'}</p>
 
+                            ${t.adminW ? `<p><strong>Admin W.:</strong> ${t.adminW}</p>` : ''}
+                            ${t.coordCouns ? `<p><strong>Coord./Couns:</strong> ${t.coordCouns}</p>` : ''}
+                            ${t.advCoAdv ? `<p><strong>Adv/Co-Adv:</strong> ${t.advCoAdv}</p>` : ''}
+                            ${t.headDept ? `<p><strong>Head Dept.:</strong> ${t.headDept}</p>` : ''}
+
                             ${coursesHtml}
 
                             ${t.email
@@ -1621,11 +1656,34 @@
                 document.getElementById('enrollment-total').textContent = total;
             },
 
+            sortTeacherConfig: { key: 'groups', direction: 'desc' },
+            sortSubjectConfig: { key: 'count', direction: 'desc' },
+
+            sortTeachersBy(key) {
+                if (this.sortTeacherConfig.key === key) {
+                    this.sortTeacherConfig.direction = this.sortTeacherConfig.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortTeacherConfig.key = key;
+                    this.sortTeacherConfig.direction = 'desc'; // Default to desc for logic like grades/counts usually, or user pref
+                }
+                this.renderLoadSummaries();
+            },
+
+            sortSubjectsBy(key) {
+                if (this.sortSubjectConfig.key === key) {
+                    this.sortSubjectConfig.direction = this.sortSubjectConfig.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortSubjectConfig.key = key;
+                    this.sortSubjectConfig.direction = 'desc';
+                }
+                this.renderLoadSummaries();
+            },
+
             renderLoadSummaries() {
                 const teachers = Store.get('staffingData', []);
 
                 // --- 1. Groups per Teacher ---
-                const teacherCounts = teachers.map(t => {
+                let teacherCounts = teachers.map(t => {
                     let groups = 0;
                     for (let i = 1; i <= 5; i++) {
                         if (t[`course${i}`] && t[`course${i}`].trim() !== '') {
@@ -1636,7 +1694,21 @@
                         name: `${t.name} ${t.lastName}`,
                         groups: groups
                     };
-                }).sort((a, b) => b.groups - a.groups); // Descending
+                });
+
+                // Sort Teachers
+                const tKey = this.sortTeacherConfig.key;
+                const tDir = this.sortTeacherConfig.direction;
+                teacherCounts.sort((a, b) => {
+                    let va = a[tKey];
+                    let vb = b[tKey];
+                    if (typeof va === 'string') va = va.toLowerCase();
+                    if (typeof vb === 'string') vb = vb.toLowerCase();
+
+                    if (va < vb) return tDir === 'asc' ? -1 : 1;
+                    if (va > vb) return tDir === 'asc' ? 1 : -1;
+                    return 0;
+                });
 
                 const teacherBody = document.getElementById('data-teachers-body');
                 if (teacherBody) {
@@ -1659,9 +1731,22 @@
                     }
                 });
 
-                const subjectArray = Object.entries(subjectCounts)
-                    .map(([subject, count]) => ({ subject, count }))
-                    .sort((a, b) => b.count - a.count); // Descending
+                let subjectArray = Object.entries(subjectCounts)
+                    .map(([subject, count]) => ({ subject, count }));
+
+                // Sort Subjects
+                const sKey = this.sortSubjectConfig.key;
+                const sDir = this.sortSubjectConfig.direction;
+                subjectArray.sort((a, b) => {
+                    let va = a[sKey];
+                    let vb = b[sKey];
+                    if (typeof va === 'string') va = va.toLowerCase();
+                    if (typeof vb === 'string') vb = vb.toLowerCase();
+
+                    if (va < vb) return sDir === 'asc' ? -1 : 1;
+                    if (va > vb) return sDir === 'asc' ? 1 : -1;
+                    return 0;
+                });
 
                 const subjectBody = document.getElementById('data-subjects-body');
                 if (subjectBody) {
@@ -1907,6 +1992,10 @@
                         <td>${s.course5 || ''}</td>
                         <td>${s.hoursPerWeek}</td>
                         <td><a href="mailto:${s.email}" style="color: var(--ats-red)">${s.email}</a></td>
+                        <td>${s.adminW || ''}</td>
+                        <td>${s.coordCouns || ''}</td>
+                        <td>${s.advCoAdv || ''}</td>
+                        <td>${s.headDept || ''}</td>
                         <td>
                             <button class="btn btn-sm btn-secondary" onclick="App.openModal('staffing', ${s.id})">Edit</button>
                             <button class="btn btn-sm btn-danger" onclick="Staffing.delete(${s.id})">Del</button>
@@ -2009,6 +2098,23 @@
                             <input type="email" class="form-control" name="email" value="${item?.email || ''}" required>
                         </div>
                         
+                        <div class="form-group">
+                            <label class="form-label">Admin W.</label>
+                            <input class="form-control" name="adminW" value="${item?.adminW || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Coord./Couns</label>
+                            <input class="form-control" name="coordCouns" value="${item?.coordCouns || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Adv/Co-Adv</label>
+                            <input class="form-control" name="advCoAdv" value="${item?.advCoAdv || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Head Dept.</label>
+                            <input class="form-control" name="headDept" value="${item?.headDept || ''}">
+                        </div>
+                        
                         ${courseFieldsHtml}
 
                         <button class="btn btn-primary" style="margin-top: 1rem;">Save</button>
@@ -2028,6 +2134,10 @@
                     teacherId: formData.get('teacherId'),
                     hoursPerWeek: formData.get('hoursPerWeek'),
                     email: formData.get('email'),
+                    adminW: formData.get('adminW'),
+                    coordCouns: formData.get('coordCouns'),
+                    advCoAdv: formData.get('advCoAdv'),
+                    headDept: formData.get('headDept'),
                     // Capture Grade and Course for 1-5
                     course1Grade: formData.get('course1Grade'),
                     course1: formData.get('course1'),
@@ -2130,114 +2240,4 @@
                             </div>
                         </div>
 
-                        <!-- Courses Column -->
-                        <div style="flex: 1; min-width: 250px;">
-                            <h4 style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Courses</h4>
-                            <div class="form-group" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                                <select id="new-course-grade" class="form-control" style="width: 80px;">
-                                    ${grades.map(g => `<option value="${g}">${g}</option>`).join('')}
-                                </select>
-                                <input id="new-course" class="form-control" placeholder="New Course">
-                                <button class="btn btn-primary" onclick="Staffing.addOption('courses')">Add</button>
-                            </div>
-                            <div style="max-height: 400px; overflow-y: auto;">
-                                ${coursesHtml}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            },
-
-            addOption(type) {
-                const options = this.getOptions();
-
-                if (type === 'departments') {
-                    const input = document.getElementById('new-dept');
-                    const val = input.value.trim();
-                    if (!val) return;
-                    options.departments.push(val);
-                    options.departments.sort();
-                } else if (type === 'courses') {
-                    const gradeInput = document.getElementById('new-course-grade');
-                    const nameInput = document.getElementById('new-course');
-                    const grade = gradeInput.value;
-                    const val = nameInput.value.trim();
-
-                    if (!val) return;
-                    if (!options.coursesByGrade[grade]) options.coursesByGrade[grade] = [];
-                    options.coursesByGrade[grade].push(val);
-                    options.coursesByGrade[grade].sort();
-                }
-
-                Store.set('options', options);
-                saveOptionsToSheet(options); // 👈 manda catálogos al Sheet
-                this.renderSettings(document.getElementById('modal-body'));
-            },
-
-            deleteOption(type, index, grade = null) {
-                if (!confirm('Delete this option?')) return;
-                const options = this.getOptions();
-
-                if (type === 'departments') {
-                    options.departments.splice(index, 1);
-                } else if (type === 'courses' && grade) {
-                    options.coursesByGrade[grade].splice(index, 1);
-                }
-
-                Store.set('options', options);
-                saveOptionsToSheet(options); // 👈 manda cambios al Sheet
-                this.renderSettings(document.getElementById('modal-body'));
-            },
-
-            editOption(type, index, grade = null) {
-                const options = this.getOptions();
-                let current = '';
-
-                if (type === 'departments') {
-                    current = options.departments[index];
-                } else {
-                    current = options.coursesByGrade[grade][index];
-                }
-
-                const newVal = prompt('Edit name:', current);
-                if (newVal && newVal.trim() !== '') {
-                    if (type === 'departments') {
-                        const newName = newVal.trim();
-                        options.departments[index] = newName;
-                        options.departments.sort();
-                    } else {
-                        const newName = newVal.trim();
-                        let newGrade = grade;
-
-                        const gradeInput = prompt('Confirm Grade (9, 10, 11, 12):', grade);
-                        if (gradeInput && ["9", "10", "11", "12", "E"].includes(gradeInput)) {
-                            newGrade = gradeInput;
-                        }
-
-                        if (newGrade !== grade) {
-                            // mover de un grado a otro
-                            options.coursesByGrade[grade].splice(index, 1);
-                            if (!options.coursesByGrade[newGrade]) options.coursesByGrade[newGrade] = [];
-                            options.coursesByGrade[newGrade].push(newName);
-                            options.coursesByGrade[newGrade].sort();
-                        } else {
-                            // solo cambiar el nombre
-                            options.coursesByGrade[grade][index] = newName;
-                            options.coursesByGrade[grade].sort();
-                        }
-                    }
-
-                    Store.set('options', options);
-                    saveOptionsToSheet(options); // 👈 también guardamos en Sheet
-                    this.renderSettings(document.getElementById('modal-body'));
-                }
-            }
-        };
-
-        // Initialize App
-        App.init();
-    </script>
-
-</body>
-
-</html>
+       
