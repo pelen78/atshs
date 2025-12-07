@@ -665,6 +665,10 @@
                 <li class="nav-item hidden" id="nav-staffing" data-section="staffing">
                     <span>🔒</span> Staffing DB
                 </li>
+                <!-- 👉 New Data Section -->
+                <li class="nav-item admin-only hidden" data-section="data">
+                    <span>📊</span> Data
+                </li>
             </ul>
             <div class="user-info">
                 <span id="current-user-display">User</span>
@@ -776,6 +780,86 @@
                         </thead>
                         <tbody id="staffing-body"></tbody>
                     </table>
+                </div>
+            </section>
+
+            <!-- 7. Data Section -->
+            <section id="section-data" class="content-section hidden">
+                <div class="section-header">
+                    <h2 class="section-title">School Data & Analytics</h2>
+                </div>
+
+                <!-- Enrollment by Grade -->
+                <div class="card">
+                    <h3>Enrollment by Grade</h3>
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; align-items: flex-end;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">9th Grade</label>
+                            <input type="number" id="enrollment-9" class="form-control" style="width: 100px;" min="0"
+                                oninput="Data.updateEnrollmentTotal()">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">10th Grade</label>
+                            <input type="number" id="enrollment-10" class="form-control" style="width: 100px;" min="0"
+                                oninput="Data.updateEnrollmentTotal()">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">11th Grade</label>
+                            <input type="number" id="enrollment-11" class="form-control" style="width: 100px;" min="0"
+                                oninput="Data.updateEnrollmentTotal()">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">12th Grade</label>
+                            <input type="number" id="enrollment-12" class="form-control" style="width: 100px;" min="0"
+                                oninput="Data.updateEnrollmentTotal()">
+                        </div>
+                        <div style="margin-left: auto; font-size: 1.2rem; font-weight: bold; padding-bottom: 5px;">
+                            Total Students: <span id="enrollment-total" style="color: var(--ats-red);">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teaching Load Summary -->
+                <div class="card">
+                    <h3>Teaching Load Summary</h3>
+                    <p class="text-muted" style="margin-bottom: 1.5rem;">Calculated from Staffing DB (1 Course Slot = 1
+                        Group)</p>
+
+                    <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+                        <!-- Groups per Teacher -->
+                        <div style="flex: 1; min-width: 300px;">
+                            <h4 style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Total
+                                Groups per Teacher</h4>
+                            <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Teacher</th>
+                                            <th>Total Groups</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="data-teachers-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Groups per Subject -->
+                        <div style="flex: 1; min-width: 300px;">
+                            <h4 style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Total
+                                Groups per Subject</h4>
+                            <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Subject</th>
+                                            <th>Total Groups</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="data-subjects-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>
@@ -956,7 +1040,7 @@
 
         // --- Constants & Config ---
         const ROLES = { ADMIN: 'admin', TEACHER: 'teacher' };
-        const SECTIONS = ['directory', 'news', 'tutorials', 'forum', 'staffing'];
+        const SECTIONS = ['directory', 'news', 'tutorials', 'forum', 'staffing', 'data'];
 
         // --- Mobile Menu Toggle ---
         function toggleMobileMenu() {
@@ -1112,6 +1196,7 @@
                     case 'tutorials': Tutorials.render(); break;
                     case 'forum': Forum.renderTopics(); break;
                     case 'staffing': if (Auth.isAdmin()) Staffing.render(); break;
+                    case 'data': Data.render(); break;
                 }
             },
 
@@ -1436,6 +1521,95 @@
                 const data = Store.get('tutorials', []).filter(x => x.id !== id);
                 Store.set('tutorials', data);
                 this.render();
+            }
+        };
+
+        // 7. Data
+        const Data = {
+            render() {
+                this.renderEnrollment();
+                this.renderLoadSummaries();
+            },
+
+            renderEnrollment() {
+                const data = Store.get('enrollment', { 9: 0, 10: 0, 11: 0, 12: 0 });
+
+                document.getElementById('enrollment-9').value = data[9];
+                document.getElementById('enrollment-10').value = data[10];
+                document.getElementById('enrollment-11').value = data[11];
+                document.getElementById('enrollment-12').value = data[12];
+
+                this.calculateTotal(data);
+            },
+
+            updateEnrollmentTotal() {
+                const data = {
+                    9: parseInt(document.getElementById('enrollment-9').value) || 0,
+                    10: parseInt(document.getElementById('enrollment-10').value) || 0,
+                    11: parseInt(document.getElementById('enrollment-11').value) || 0,
+                    12: parseInt(document.getElementById('enrollment-12').value) || 0
+                };
+
+                Store.set('enrollment', data);
+                this.calculateTotal(data);
+            },
+
+            calculateTotal(data) {
+                const total = (data[9] || 0) + (data[10] || 0) + (data[11] || 0) + (data[12] || 0);
+                document.getElementById('enrollment-total').textContent = total;
+            },
+
+            renderLoadSummaries() {
+                const teachers = Store.get('staffingData', []);
+
+                // --- 1. Groups per Teacher ---
+                const teacherCounts = teachers.map(t => {
+                    let groups = 0;
+                    for (let i = 1; i <= 5; i++) {
+                        if (t[`course${i}`] && t[`course${i}`].trim() !== '') {
+                            groups++;
+                        }
+                    }
+                    return {
+                        name: `${t.name} ${t.lastName}`,
+                        groups: groups
+                    };
+                }).sort((a, b) => b.groups - a.groups); // Descending
+
+                const teacherBody = document.getElementById('data-teachers-body');
+                if (teacherBody) {
+                    teacherBody.innerHTML = teacherCounts.map(t => `
+                        <tr>
+                            <td>${t.name}</td>
+                            <td>${t.groups}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                // --- 2. Groups per Subject ---
+                const subjectCounts = {};
+                teachers.forEach(t => {
+                    for (let i = 1; i <= 5; i++) {
+                        const course = t[`course${i}`];
+                        if (course && course.trim() !== '') {
+                            subjectCounts[course] = (subjectCounts[course] || 0) + 1;
+                        }
+                    }
+                });
+
+                const subjectArray = Object.entries(subjectCounts)
+                    .map(([subject, count]) => ({ subject, count }))
+                    .sort((a, b) => b.count - a.count); // Descending
+
+                const subjectBody = document.getElementById('data-subjects-body');
+                if (subjectBody) {
+                    subjectBody.innerHTML = subjectArray.map(s => `
+                        <tr>
+                            <td>${s.subject}</td>
+                            <td>${s.count}</td>
+                        </tr>
+                    `).join('');
+                }
             }
         };
 
