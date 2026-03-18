@@ -374,13 +374,12 @@
 </div>
 <div id="toast"></div>
 
-<script type="module">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
 // ============================================================
 // FIREBASE CONFIGURATION
 // ============================================================
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, onSnapshot, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-
 const firebaseConfig = {
   apiKey: "AIzaSyA90qFr9OfqvUJU6Fe063OMoCKY71VcTnQ",
   authDomain: "ats-hs-portal.firebaseapp.com",
@@ -390,8 +389,8 @@ const firebaseConfig = {
   appId: "1:882807395120:web:1c1abcf1617a782806eef5"
 };
 
-const fbApp = initializeApp(firebaseConfig);
-const db = getFirestore(fbApp);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 const SYNC_MS=30000;
 
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -426,13 +425,13 @@ const AutoSync={
 async function sendTeacher(t){
   try{
     const id=String(t.id||Date.now());
-    await setDoc(doc(db,'staffing',id),{...t,id});
+    await db.collection('staffing').doc(id).set({...t,id});
     console.log('[Firebase] Teacher saved:',t.name);
   }catch(e){console.error('[Firebase] Error saving teacher:',e);}
 }
 async function delTeacher(id){
   try{
-    await deleteDoc(doc(db,'staffing',String(id)));
+    await db.collection('staffing').doc(String(id)).delete();
     console.log('[Firebase] Teacher deleted:',id);
   }catch(e){console.error('[Firebase] Error deleting teacher:',e);}
 }
@@ -446,7 +445,7 @@ function loadStaff(force=false){
   if(staffUnsubscribe) staffUnsubscribe();
   return new Promise((resolve,reject)=>{
     // Real-time listener — auto-updates when Firebase changes
-    staffUnsubscribe = onSnapshot(collection(db,'staffing'), snapshot=>{
+    staffUnsubscribe = db.collection('staffing').onSnapshot(snapshot=>{
       const list=snapshot.docs.map(d=>({...d.data(),id:d.id}));
       console.log('[Firebase] Staff loaded:',list.length,'records');
       Store.set('staffingData',list);
@@ -462,8 +461,8 @@ let optsLoaded=false;
 async function loadOpts(force=false){
   if(optsLoaded&&!force)return Promise.resolve();
   try{
-    const snap=await getDoc(doc(db,'config','options'));
-    if(snap.exists()){
+    const snap=await db.collection('config').doc('options').get();
+    if(snap.exists){
       const d=snap.data();
       const b=Staffing.DEF;
       Store.set('options',{
@@ -478,7 +477,7 @@ async function loadOpts(force=false){
 }
 async function saveOpts(o){
   try{
-    await setDoc(doc(db,'config','options'),{departments:o.departments||[],coursesByGrade:o.coursesByGrade||{}});
+    await db.collection('config').doc('options').set({departments:o.departments||[],coursesByGrade:o.coursesByGrade||{}});
     console.log('[Firebase] Options saved');
   }catch(e){console.error('[Firebase] saveOpts error:',e);}
 }
@@ -487,8 +486,8 @@ let enrollLoaded=false;
 async function loadEnroll(force=false){
   if(enrollLoaded&&!force)return null;
   try{
-    const snap=await getDoc(doc(db,'config','enrollment'));
-    if(snap.exists()){
+    const snap=await db.collection('config').doc('enrollment').get();
+    if(snap.exists){
       const d=snap.data();
       const e={9:Number(d.Grade9)||0,10:Number(d.Grade10)||0,11:Number(d.Grade11)||0,12:Number(d.Grade12)||0};
       Store.set('enrollment',e);enrollLoaded=true;
@@ -500,7 +499,7 @@ async function loadEnroll(force=false){
 }
 async function saveEnroll(e){
   try{
-    await setDoc(doc(db,'config','enrollment'),{Grade9:e[9]||0,Grade10:e[10]||0,Grade11:e[11]||0,Grade12:e[12]||0});
+    await db.collection('config').doc('enrollment').set({Grade9:e[9]||0,Grade10:e[10]||0,Grade11:e[11]||0,Grade12:e[12]||0});
     console.log('[Firebase] Enrollment saved');
   }catch(e){console.error('[Firebase] saveEnroll error:',e);}
 }
@@ -546,8 +545,11 @@ const Auth={
 const App={
   init(){
     Store.seed();
+    // Ensure login screen is visible by default
+    const ls=document.getElementById('login-screen');
+    if(ls) ls.style.display='flex';
     if(Auth.check())this.showDash();
-    else{const ls=document.getElementById('login-screen');ls.style.display='flex';}
+    else if(ls) ls.style.display='flex';
     document.getElementById('login-form').addEventListener('submit',e=>{
       e.preventDefault();
       if(Auth.login(document.getElementById('username').value,document.getElementById('password').value)){
@@ -558,6 +560,9 @@ const App={
     document.querySelectorAll('.nav-item[data-section]').forEach(i=>i.addEventListener('click',()=>{this.navigate(i.dataset.section);document.getElementById('sidebar').classList.remove('open');}));
   },
   showDash(){
+    // Hide login, show app
+    const ls=document.getElementById('login-screen');
+    if(ls) ls.style.display='none';
     const app=document.getElementById('app');app.classList.remove('hidden');app.style.display='flex';
     document.getElementById('user-avatar').textContent=Auth.user.ini||'??';
     document.getElementById('user-name').textContent=Auth.user.name;
@@ -626,7 +631,7 @@ const News={
     try{
       if(!this.loaded){
         try{
-          const snap=await getDocs(collection(db,'news'));
+          const snap=await db.collection('news').get();
           this.items=snap.docs.map(d=>({...d.data(),id:d.id}));
           console.log('[Firebase] News loaded:',this.items.length);
         }catch(e){console.error('[Firebase] News error:',e);this.items=[];}
@@ -959,19 +964,14 @@ const Data={
   }
 };
 
-App.init();
+// Functions are global since we removed type="module"
 
-// Expose to global scope (needed because type="module" isolates scope)
-window.App = App;
-window.Staffing = Staffing;
-window.Tutorials = Tutorials;
-window.Data = Data;
-window.Directory = Directory;
-window.News = News;
-window.Forum = Forum;
-window.handleSearch = handleSearch;
-window.toggleMenu = toggleMenu;
-window.AutoSync = AutoSync;
+// Run after DOM is ready
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', ()=>App.init());
+} else {
+  App.init();
+}
 </script>
 </body>
 </html>
