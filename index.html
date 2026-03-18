@@ -574,12 +574,13 @@ const App={
     if(id==='directory'||id==='staffing')loadStaff();
     switch(id){case 'directory':Directory.render();break;case 'news':News.render();break;case 'tutorials':Tutorials.render();break;case 'staffing':if(Auth.isAdmin())Staffing.render();break;case 'data':Data.render();break;}
   },
-  openModal(type,id=null){
+  async openModal(type,id=null){
     document.getElementById('modal-overlay').style.display='flex';
     const body=document.getElementById('modal-body');
+    body.innerHTML='<p style="color:var(--muted);font-size:.875rem;padding:1rem;text-align:center;">Loading...</p>';
     if(type==='news')News.renderForm(body,id);
     else if(type==='tutorials')Tutorials.renderForm(body,id);
-    else if(type==='staffing')Staffing.renderForm(body,id);
+    else if(type==='staffing')await Staffing.renderForm(body,id);
   },
   closeModal(){document.getElementById('modal-overlay').style.display='none';}
 };
@@ -797,14 +798,21 @@ const Staffing={
   getCOpts(grade,sel=''){const o=this.getOpts();const courses=(o.coursesByGrade[grade]||[]).slice().sort();return'<option value="">Select course</option>'+courses.map(c=>`<option value="${c}" ${sel===c?'selected':''}>${c}</option>`).join('');},
   updateCourse(i,g){const s=document.getElementById('cs'+i);if(s)s.innerHTML=this.getCOpts(g);},
 
-  renderForm(c,id){
-    // Support both number and string IDs (Google Sheets returns strings)
-    // Also handle 'null' string that comes from data-editid when adding new
+  async renderForm(c,id){
+    // Support both number and string IDs
     const rawId=(id===null||id==='null'||id===undefined||id==='undefined')?null:id;
     const allData=Store.get('staffingData',[]);
     const item=rawId!=null?allData.find(x=>String(x.id)===String(rawId)):null;
     console.log('[renderForm] id=',id,'rawId=',rawId,'found=',item?item.name:'NOT FOUND','total records=',allData.length);
     const isEdit=!!(item && rawId!=null);
+
+    // Ensure options are loaded before rendering courses
+    const opts=this.getOpts();
+    const hasRealOpts=opts.departments && opts.departments.length>2;
+    if(!hasRealOpts){
+      c.innerHTML='<p style="color:var(--muted);font-size:.875rem;padding:1rem;">Loading options...</p>';
+      await loadOpts(true);
+    }
     const o=this.getOpts();
     document.getElementById('modal-title').textContent=isEdit?'Edit Teacher':'Add Teacher';
     const dOpts=o.departments.map(d=>`<option value="${d}" ${item?.department===d?'selected':''}>${d}</option>`).join('');
@@ -878,7 +886,7 @@ const Staffing={
       return;
     }
     document.getElementById('modal-overlay').style.display='flex';
-    Staffing.renderForm(document.getElementById('modal-body'), id);
+    await Staffing.renderForm(document.getElementById('modal-body'), id);
   },
 
   del(id){
@@ -952,6 +960,18 @@ const Data={
 };
 
 App.init();
+
+// Expose to global scope (needed because type="module" isolates scope)
+window.App = App;
+window.Staffing = Staffing;
+window.Tutorials = Tutorials;
+window.Data = Data;
+window.Directory = Directory;
+window.News = News;
+window.Forum = Forum;
+window.handleSearch = handleSearch;
+window.toggleMenu = toggleMenu;
+window.AutoSync = AutoSync;
 </script>
 </body>
 </html>
