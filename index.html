@@ -881,7 +881,7 @@ const Staffing={
     }
   },
 
-  edit(id){
+  async edit(id){
     // Find the record first and open modal only if found
     const all=Store.get('staffingData',[]);
     const found=all.find(x=>String(x.id)===String(id));
