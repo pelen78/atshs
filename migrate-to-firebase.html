@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATS — Migrate Staff to Firebase</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 700px; margin: 40px auto; padding: 1rem; background: #f5f5f3; color: #1a1a18; }
+    h1 { color: #003087; font-size: 1.5rem; margin-bottom: 0.25rem; }
+    p { color: #6b6b65; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .card { background: white; border-radius: 8px; border: 1px solid #e8e6e0; padding: 1.5rem; margin-bottom: 1rem; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.6rem 1.25rem; border-radius: 5px; font-size: 0.9rem; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+    .btn-primary { background: #E31937; color: white; }
+    .btn-primary:hover { background: #c41230; }
+    .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+    .btn-secondary { background: #eef1f8; color: #003087; border: 1px solid #d0cec8; }
+    #log { background: #1a1a18; color: #a8ff78; border-radius: 6px; padding: 1rem; font-family: monospace; font-size: 0.82rem; height: 300px; overflow-y: auto; margin-top: 1rem; }
+    .log-ok { color: #a8ff78; }
+    .log-err { color: #ff6b6b; }
+    .log-info { color: #74b9ff; }
+    .progress-bar { height: 8px; background: #e8e6e0; border-radius: 4px; margin: 1rem 0; overflow: hidden; }
+    .progress-fill { height: 100%; background: #003087; border-radius: 4px; transition: width 0.3s; width: 0%; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
+    .stat { background: #eef1f8; border-radius: 6px; padding: 0.75rem 1rem; text-align: center; }
+    .stat-num { font-size: 1.5rem; font-weight: 600; color: #003087; }
+    .stat-lbl { font-size: 0.72rem; color: #6b6b65; text-transform: uppercase; letter-spacing: 0.05em; }
+  </style>
+</head>
+<body>
+
+<h1>🚀 ATS Staff Migration Tool</h1>
+<p>Uploads all 58 staff members to Firebase Firestore in one click.</p>
+
+<div class="card">
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="total-count">58</div><div class="stat-lbl">Total Staff</div></div>
+    <div class="stat"><div class="stat-num" id="uploaded-count" style="color:#2d7a4f">0</div><div class="stat-lbl">Uploaded</div></div>
+    <div class="stat"><div class="stat-num" id="error-count" style="color:#c0392b">0</div><div class="stat-lbl">Errors</div></div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn btn-primary" id="migrate-btn" onclick="startMigration()">▶ Upload All Staff to Firebase</button>
+    <button class="btn btn-secondary" onclick="clearLog()">Clear Log</button>
+  </div>
+  <div id="log"></div>
+</div>
+
+<div class="card" style="font-size:0.82rem;color:#6b6b65;">
+  <strong style="color:#003087;">⚠ Run this tool only once.</strong> 
+  Running it multiple times will overwrite existing records with the same ID. 
+  After migration, you can close this page — it's no longer needed.
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyA90qFr9OfqvUJU6Fe063OMoCKY71VcTnQ",
+  authDomain: "ats-hs-portal.firebaseapp.com",
+  projectId: "ats-hs-portal",
+  storageBucket: "ats-hs-portal.firebasestorage.app",
+  messagingSenderId: "882807395120",
+  appId: "1:882807395120:web:1c1abcf1617a782806eef5"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const STAFF = [
+  {id:"ST001",name:"Iliana",lastName:"Olvera",email:"iolvera@ats.edu.mx"},
+  {id:"ST005",name:"Maria Alejandra",lastName:"Roman",email:"mroman@ats.edu.mx"},
+  {id:"ST017",name:"Juan",lastName:"Ponce",email:"jponce@ats.edu.mx"},
+  {id:"ST019",name:"Carrie",lastName:"Heeter",email:"cheeter@ats.edu.mx"},
+  {id:"ST024",name:"Lila Gloria",lastName:"Peña",email:"lpena@ats.edu.mx"},
+  {id:"ST025",name:"Cynthia",lastName:"Juarez",email:"c.juarez@ats.edu.mx"},
+  {id:"ST029",name:"Victoria",lastName:"Mejia",email:"vmejia@ats.edu.mx"},
+  {id:"ST034",name:"Edgar",lastName:"Castan",email:"ecastan@ats.edu.mx"},
+  {id:"ST045",name:"Luz Alejandra",lastName:"Rodriguez",email:"l.rodriguez@ats.edu.mx"},
+  {id:"ST047",name:"Noel",lastName:"Hernandez",email:"nhernandez@ats.edu.mx"},
+  {id:"ST052",name:"Keili",lastName:"Gunden",email:"kgunden@ats.edu.mx"},
+  {id:"ST054",name:"Irvin",lastName:"Resendiz",email:"iresendiz@ats.edu.mx"},
+  {id:"ST055",name:"Mariola",lastName:"Pintado",email:"mpintado@ats.edu.mx"},
+  {id:"ST064",name:"Maria",lastName:"Montes Chavez",email:"mechavez@ats.edu.mx"},
+  {id:"ST065",name:"Beatriz",lastName:"Olguin Tijerina",email:"bolguin@ats.edu.mx"},
+  {id:"ST072",name:"Ana Sofia",lastName:"Haces",email:"ahaces@ats.edu.mx"},
+  {id:"ST073",name:"Marcela",lastName:"Morales Salinas",email:"mmorales@ats.edu.mx"},
+  {id:"ST083",name:"Cristo Abisad",lastName:"Gabriela",email:""},
+  {id:"ST087",name:"Rubi Scarlett",lastName:"Rabago Hernandez",email:""},
+  {id:"ST095",name:"Belinda",lastName:"Rodriguez",email:"b.rodriguez@ats.edu.mx"},
+  {id:"ST096",name:"Gloria",lastName:"Martinez Caballero",email:"lmartinez@ats.edu.mx"},
+  {id:"ST100",name:"Martha Laura",lastName:"Garza Garcia",email:"mgarza@ats.edu.mx"},
+  {id:"ST115",name:"Elvia",lastName:"Gonzalez Rodriguez",email:"egonzalez@ats.edu.mx"},
+  {id:"ST127",name:"Gloria",lastName:"Rivera Gonzalez",email:""},
+  {id:"ST141",name:"Michelle",lastName:"Pangtay",email:""},
+  {id:"ST152",name:"Mariana",lastName:"Sabbatini Santisteban",email:"msabbatini@ats.edu.mx"},
+  {id:"ST154",name:"Ruth",lastName:"Lozano",email:"rlozano@ats.edu.mx"},
+  {id:"ST157",name:"Ana",lastName:"Davila Montiel",email:"adavila@ats.edu.mx"},
+  {id:"ST160",name:"Berenice",lastName:"Tinajero",email:"btinajero@ats.edu.mx"},
+  {id:"ST161",name:"Gerardo",lastName:"Nuñez",email:""},
+  {id:"ST169",name:"Alexandria",lastName:"Geosits",email:""},
+  {id:"ST178",name:"Lorena",lastName:"Montiel",email:"lmontiel@ats.edu.mx"},
+  {id:"ST179",name:"Jessica",lastName:"Hernandez",email:"jhernandez@ats.edu.mx"},
+  {id:"ST180",name:"Del Castillo",lastName:"Marco Antonio",email:""},
+  {id:"ST185",name:"Etienne",lastName:"Du Toit",email:"edutoit@ats.edu.mx"},
+  {id:"ST190",name:"James",lastName:"Roman",email:"jroman@ats.edu.mx"},
+  {id:"ST192",name:"Marichuy",lastName:"Ponce",email:"mponce@ats.edu.mx"},
+  {id:"ST196",name:"Mathieu",lastName:"Berthin",email:"mberthin@ats.edu.mx"},
+  {id:"ST200",name:"Luis Patricio",lastName:"Alvarado Mendez",email:"pmendez@ats.edu.mx"},
+  {id:"ST203",name:"Cristobal",lastName:"Curiel Lopez",email:"ccuriel@ats.edu.mx"},
+  {id:"ST208",name:"Gloria",lastName:"Morales Fusco",email:"gmorales@ats.edu.mx"},
+  {id:"ST214",name:"Minerva",lastName:"Rodriguez",email:""},
+  {id:"ST221",name:"Diana",lastName:"Paredes Treviño",email:"dparedes@ats.edu.mx"},
+  {id:"ST227",name:"Judith",lastName:"Paez",email:"jpaez@ats.edu.mx"},
+  {id:"ST229",name:"Nora",lastName:"Mercado Contreras",email:"nmercado@ats.edu.mx"},
+  {id:"ST239",name:"Diann",lastName:"Moyer",email:""},
+  {id:"ST242",name:"Alejandro",lastName:"Magaña",email:"amagana@ats.edu.mx"},
+  {id:"ST245",name:"Gerardo",lastName:"Meza",email:"gmeza@ats.edu.mx"},
+  {id:"ST246",name:"Jesus",lastName:"Gonzalez",email:"jegonzalez@ats.edu.mx"},
+  {id:"ST247",name:"Teresa",lastName:"Villela",email:"tvillela@ats.edu.mx"},
+  {id:"ST254",name:"Yaris",lastName:"Coronado",email:""},
+  {id:"ST255",name:"Jose Isaac",lastName:"Martinez",email:"imartinez@ats.edu.mx"},
+  {id:"ST260",name:"Maximiliano",lastName:"Renk Nieto",email:"mrenk@ats.edu.mx"},
+  {id:"ST261",name:"Edgar",lastName:"Leyto Meza",email:"eleyto@ats.edu.mx"},
+  {id:"ST264",name:"Lilia",lastName:"Duran",email:"lduran@ats.edu.mx"},
+  {id:"ST291",name:"Michael",lastName:"Geer",email:"mgeer@ats.edu.mx"},
+  {id:"ST372",name:"Grace",lastName:"Paredes Treviño",email:"gparedes@ats.edu.mx"},
+  {id:"ST435",name:"Fernando",lastName:"Escobar",email:""},
+  {id:"ST438",name:"Sandra",lastName:"Treviño",email:""}
+];
+
+let uploaded = 0;
+let errors = 0;
+
+function log(msg, type='info') {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  line.className = 'log-' + type;
+  line.textContent = msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('log').innerHTML = '';
+}
+
+function updateStats() {
+  document.getElementById('uploaded-count').textContent = uploaded;
+  document.getElementById('error-count').textContent = errors;
+  const pct = Math.round((uploaded + errors) / STAFF.length * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+async function startMigration() {
+  const btn = document.getElementById('migrate-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Uploading...';
+  uploaded = 0; errors = 0;
+  updateStats();
+
+  log('🚀 Starting migration — ' + STAFF.length + ' staff members', 'info');
+  log('Connecting to Firebase project: ats-hs-portal', 'info');
+  log('─'.repeat(50), 'info');
+
+  for (const staff of STAFF) {
+    try {
+      const record = {
+        ...staff,
+        department: '',
+        hoursPerWeek: '100%',
+        course1: '', course2: '', course3: '', course4: '', course5: '',
+        adminW: '', coordCouns: '', advCoAdv: '', headDept: '',
+        teacherId: staff.id,
+        updatedAt: new Date().toISOString()
+      };
+      await db.collection('staffing').doc(staff.id).set(record);
+      uploaded++;
+      log('✓ ' + staff.name + ' ' + staff.lastName + ' (' + staff.id + ')', 'ok');
+      updateStats();
+      // Small delay to avoid rate limiting
+      await new Promise(r => setTimeout(r, 50));
+    } catch(e) {
+      errors++;
+      log('✗ ERROR — ' + staff.name + ' ' + staff.lastName + ': ' + e.message, 'err');
+      updateStats();
+    }
+  }
+
+  log('─'.repeat(50), 'info');
+  if (errors === 0) {
+    log('✅ Migration complete! All ' + uploaded + ' staff members uploaded successfully.', 'ok');
+    btn.textContent = '✅ Done!';
+    btn.style.background = '#2d7a4f';
+  } else {
+    log('⚠ Done with ' + errors + ' errors. Check red lines above.', 'err');
+    btn.textContent = '⚠ Done with errors';
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
