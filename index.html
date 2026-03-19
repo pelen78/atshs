@@ -225,11 +225,11 @@
   <div class="login-card">
     <img src="ats-logo.jpg" alt="ATS" class="login-logo">
     <p class="login-tag">Staff Portal — Please sign in</p>
-    <form id="login-form">
-      <div class="form-group"><label class="form-label">Username</label><input type="text" id="username" class="form-control" placeholder="username" required autocomplete="username"></div>
-      <div class="form-group"><label class="form-label">Password</label><input type="password" id="password" class="form-control" placeholder="••••••••" required autocomplete="current-password"></div>
-      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.25rem">Sign In</button>
-    </form>
+    <button id="google-signin-btn" onclick="Auth.signInWithGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:.75rem 1rem;background:white;border:1px solid #d0cec8;border-radius:6px;font-size:.95rem;font-weight:500;cursor:pointer;color:#1a1a18;transition:box-shadow .2s;margin-top:.5rem;">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Sign in with Google
+    </button>
+    <p id="login-error" style="color:#E31937;font-size:.8rem;text-align:center;margin-top:.75rem;display:none;">Access denied. Contact the administrator.</p>
   </div>
 </div>
 
@@ -380,6 +380,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
 // ============================================================
 // FIREBASE CONFIGURATION
@@ -395,6 +396,8 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
 const SYNC_MS=30000;
 
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -535,31 +538,66 @@ function handleSearch(q){
 const ROLES={ADMIN:'admin',TEACHER:'teacher'};
 const Auth={
   user:null,
-  login(u,p){
-    if(u==='admin'&&p==='admin')this.user={name:'Administrator',role:ROLES.ADMIN,ini:'AD'};
-    else if(u==='teacher'&&p==='teacher')this.user={name:'Teacher User',role:ROLES.TEACHER,ini:'TU'};
-    else return false;
-    localStorage.setItem('ats_user',JSON.stringify(this.user));return true;
+
+  async signInWithGoogle(){
+    try{
+      const result = await auth.signInWithPopup(googleProvider);
+      const firebaseUser = result.user;
+      await this.handleUser(firebaseUser);
+    }catch(e){
+      console.error('Google sign-in error:',e);
+      document.getElementById('login-error').style.display='block';
+    }
   },
-  logout(){this.user=null;localStorage.removeItem('ats_user');location.reload();},
-  check(){const s=localStorage.getItem('ats_user');if(s)this.user=JSON.parse(s);return this.user;},
+
+  async handleUser(firebaseUser){
+    if(!firebaseUser) return;
+    // Check if email is in admins list
+    const adminSnap = await db.collection('config').doc('admins').get();
+    const adminEmails = adminSnap.exists ? (adminSnap.data().emails || []) : [];
+    const email = firebaseUser.email;
+    const isAdmin = adminEmails.includes(email);
+    const nameParts = (firebaseUser.displayName||email).split(' ');
+    const ini = nameParts.map(p=>p[0]).join('').substring(0,2).toUpperCase();
+    this.user = {
+      name: firebaseUser.displayName || email,
+      email: email,
+      role: isAdmin ? ROLES.ADMIN : ROLES.TEACHER,
+      ini: ini
+    };
+    localStorage.setItem('ats_user', JSON.stringify(this.user));
+    const ls = document.getElementById('login-screen');
+    if(ls) ls.style.display='none';
+    App.showDash();
+  },
+
+  logout(){
+    this.user=null;
+    localStorage.removeItem('ats_user');
+    auth.signOut().then(()=>location.reload());
+  },
+
+  check(){
+    const s=localStorage.getItem('ats_user');
+    if(s) this.user=JSON.parse(s);
+    return this.user;
+  },
+
   isAdmin(){return this.user&&this.user.role===ROLES.ADMIN;}
 };
 
 const App={
   init(){
     Store.seed();
-    // Ensure login screen is visible by default
+    // Show login screen by default
     const ls=document.getElementById('login-screen');
     if(ls) ls.style.display='flex';
-    if(Auth.check())this.showDash();
-    else if(ls) ls.style.display='flex';
-    document.getElementById('login-form').addEventListener('submit',e=>{
-      e.preventDefault();
-      if(Auth.login(document.getElementById('username').value,document.getElementById('password').value)){
-        document.getElementById('login-screen').style.display='none';this.showDash();
-      }else alert('Invalid credentials');
-    });
+
+    // Check if already logged in via localStorage cache
+    if(Auth.check()){
+      this.showDash();
+    }
+
     document.getElementById('logout-btn').addEventListener('click',()=>{AutoSync.stop();Auth.logout();});
     document.querySelectorAll('.nav-item[data-section]').forEach(i=>i.addEventListener('click',()=>{this.navigate(i.dataset.section);document.getElementById('sidebar').classList.remove('open');}));
   },
