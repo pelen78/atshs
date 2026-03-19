@@ -686,7 +686,7 @@ const Staffing={
 
   exportCSV(){
     const raw=Store.get('staffingData',[]);
-    const cols=['name','lastName','department','teacherId','hoursPerWeek','email','course1','course2','course3','course4','course5','adminW','coordCouns','advCoAdv','headDept'];
+    const cols=['name','lastName','department','teacherId','hoursPerWeek','email','s1_course1','s1_course2','s1_course3','s1_course4','s1_course5','s2_course1','s2_course2','s2_course3','s2_course4','s2_course5','adminW','coordCouns','advCoAdv','headDept'];
     const header=cols.join(',');
     const rows=raw.map(r=>cols.map(c=>'"'+(r[c]||'').toString().replace(/"/g,'""')+'"').join(','));
     const csv=[header,...rows].join('\n');
@@ -696,8 +696,8 @@ const Staffing={
 
   exportExcel(){
     const raw=Store.get('staffingData',[]);
-    const cols=['name','lastName','department','teacherId','hoursPerWeek','email','course1','course2','course3','course4','course5','adminW','coordCouns','advCoAdv','headDept'];
-    const header=['First Name','Last Name','Department','ID','H/Week','Email','Course 1','Course 2','Course 3','Course 4','Course 5','Admin W.','Coord/Couns','Adv/Co-Adv','Head Dept'];
+    const cols=['name','lastName','department','teacherId','hoursPerWeek','email','s1_course1','s1_course2','s1_course3','s1_course4','s1_course5','s2_course1','s2_course2','s2_course3','s2_course4','s2_course5','adminW','coordCouns','advCoAdv','headDept'];
+    const header=['First Name','Last Name','Department','ID','H/Week','Email','S1 Course 1','S1 Course 2','S1 Course 3','S1 Course 4','S1 Course 5','S2 Course 1','S2 Course 2','S2 Course 3','S2 Course 4','S2 Course 5','Admin W.','Coord/Couns','Adv/Co-Adv','Head Dept'];
     let xml='<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Staffing"><Table>';
     xml+='<Row>'+header.map(h=>'<Cell><Data ss:Type="String">'+h+'</Data></Cell>').join('')+'</Row>';
     raw.forEach(r=>{xml+='<Row>'+cols.map(c=>'<Cell><Data ss:Type="String">'+(r[c]||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</Data></Cell>').join('')+'</Row>';});
@@ -732,7 +732,11 @@ const Staffing={
     const addBtn=document.createElement('button');addBtn.className='btn btn-primary';addBtn.textContent='+ Add Teacher';addBtn.onclick=()=>App.openModal('staffing');
     ac.appendChild(settBtn);ac.appendChild(csvBtn);ac.appendChild(xlsBtn);ac.appendChild(addBtn);
     document.getElementById('staffing-body').innerHTML=paged.map(s=>{
-      const courses=[s.course1,s.course2,s.course3,s.course4,s.course5].filter(c=>c&&c.trim());
+      const s1=[s.s1_course1,s.s1_course2,s.s1_course3,s.s1_course4,s.s1_course5].filter(c=>c&&c.trim());
+      const s2=[s.s2_course1,s.s2_course2,s.s2_course3,s.s2_course4,s.s2_course5].filter(c=>c&&c.trim());
+      // fallback: if old course1-5 data exists, show in S1
+      const s1Legacy=[s.course1,s.course2,s.course3,s.course4,s.course5].filter(c=>c&&c.trim());
+      const sem1=s1.length?s1:s1Legacy;
       const extras=[
         s.adminW?`<span class="exp-tag">Admin: ${s.adminW}</span>`:'',
         s.coordCouns?`<span class="exp-tag">Coord: ${s.coordCouns}</span>`:'',
@@ -756,13 +760,22 @@ const Staffing={
         <td colspan="7" style="padding:0;">
           <div class="expand-panel">
             <div class="expand-section">
-              <span class="expand-lbl">Courses</span>
-              ${courses.length?courses.map(c=>`<span class="exp-course">${c}</span>`).join(''):
-                '<span style="color:var(--faint);font-size:.78rem;">No courses assigned</span>'}
+              <span class="expand-lbl" style="color:var(--navy);font-weight:600;">SEM 1</span>
+              <div style="margin-top:4px;">
+                ${sem1.length?sem1.map(c=>`<span class="exp-course">${c}</span>`).join(''):
+                  '<span style="color:var(--faint);font-size:.78rem;">No courses</span>'}
+              </div>
             </div>
-            ${extras?`<div class="expand-section"><span class="expand-lbl">Roles & Assignments</span>${extras}</div>`:''}
+            <div class="expand-section">
+              <span class="expand-lbl" style="color:var(--red);font-weight:600;">SEM 2</span>
+              <div style="margin-top:4px;">
+                ${s2.length?s2.map(c=>`<span class="exp-course">${c}</span>`).join(''):
+                  '<span style="color:var(--faint);font-size:.78rem;">No courses</span>'}
+              </div>
+            </div>
+            ${extras?`<div class="expand-section"><span class="expand-lbl">Roles</span>${extras}</div>`:''}
             <div class="expand-actions">
-              <button class="btn btn-primary btn-sm" onclick="Staffing.edit('${s.id}')">✏ Edit Teacher</button>
+              <button class="btn btn-primary btn-sm" onclick="Staffing.edit('${s.id}')">✏ Edit</button>
               <button class="btn btn-danger btn-sm" onclick="Staffing.del('${s.id}')">🗑 Delete</button>
             </div>
           </div>
@@ -802,6 +815,7 @@ const Staffing={
 
   getCOpts(grade,sel=''){const o=this.getOpts();const courses=(o.coursesByGrade[grade]||[]).slice().sort();return'<option value="">Select course</option>'+courses.map(c=>`<option value="${c}" ${sel===c?'selected':''}>${c}</option>`).join('');},
   updateCourse(i,g){const s=document.getElementById('cs'+i);if(s)s.innerHTML=this.getCOpts(g);},
+  updateCourseS(prefix,i,g){const s=document.getElementById(prefix+'cs'+i);if(s)s.innerHTML=this.getCOpts(g);},
 
   async renderForm(c,id){
     // Support both number and string IDs
@@ -822,10 +836,21 @@ const Staffing={
     document.getElementById('modal-title').textContent=isEdit?'Edit Teacher':'Add Teacher';
     const dOpts=o.departments.map(d=>`<option value="${d}" ${item?.department===d?'selected':''}>${d}</option>`).join('');
     const hOpts=o.hoursPerWeek.map(h=>`<option value="${h}" ${item?.hoursPerWeek===h?'selected':''}>${h}</option>`).join('');
-    let cf='';
+    // SEM 1 courses
+    let cf1='';
     for(let i=1;i<=5;i++){
-      const gk=`course${i}Grade`,ck=`course${i}`,sg=item?.[gk]||'',sc=item?.[ck]||'';
-      cf+=`<div class="form-group"><label class="form-label">Course ${i}</label><div style="display:flex;gap:8px;"><select class="form-control" name="${gk}" style="width:88px;" onchange="Staffing.updateCourse(${i},this.value)"><option value="">Grade</option>${["9","10","11","12","E"].map(g=>`<option value="${g}" ${sg===g?'selected':''}>${g}</option>`).join('')}</select><select class="form-control" id="cs${i}" name="${ck}">${this.getCOpts(sg,sc)}</select></div></div>`;
+      const gk=`s1_course${i}Grade`, ck=`s1_course${i}`;
+      // fallback to old field names for existing data
+      const sg=item?.[gk]||item?.[`course${i}Grade`]||'';
+      const sc=item?.[ck]||item?.[`course${i}`]||'';
+      cf1+=`<div class="form-group"><label class="form-label">Course ${i}</label><div style="display:flex;gap:8px;"><select class="form-control" name="${gk}" style="width:88px;" onchange="Staffing.updateCourseS('s1_',${i},this.value)"><option value="">Grade</option>${["9","10","11","12","E"].map(g=>`<option value="${g}" ${sg===g?'selected':''}>${g}</option>`).join('')}</select><select class="form-control" id="s1_cs${i}" name="${ck}">${this.getCOpts(sg,sc)}</select></div></div>`;
+    }
+    // SEM 2 courses
+    let cf2='';
+    for(let i=1;i<=5;i++){
+      const gk=`s2_course${i}Grade`, ck=`s2_course${i}`;
+      const sg=item?.[gk]||'', sc=item?.[ck]||'';
+      cf2+=`<div class="form-group"><label class="form-label">Course ${i}</label><div style="display:flex;gap:8px;"><select class="form-control" name="${gk}" style="width:88px;" onchange="Staffing.updateCourseS('s2_',${i},this.value)"><option value="">Grade</option>${["9","10","11","12","E"].map(g=>`<option value="${g}" ${sg===g?'selected':''}>${g}</option>`).join('')}</select><select class="form-control" id="s2_cs${i}" name="${ck}">${this.getCOpts(sg,sc)}</select></div></div>`;
     }
     // Bottom action bar: different for edit vs new
     const actionBar=isEdit
@@ -862,7 +887,16 @@ const Staffing={
         <div class="form-group"><label class="form-label">Head Dept.</label><input class="form-control" name="headDept" value="${item?.headDept||''}"></div>
       </div>
       <hr class="divider">
-      ${cf}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+        <div>
+          <div style="background:var(--acc-navy);border-radius:6px;padding:.4rem .85rem;margin-bottom:.75rem;font-size:.78rem;font-weight:600;color:var(--navy);">📘 Semestre 1</div>
+          ${cf1}
+        </div>
+        <div>
+          <div style="background:var(--acc-red);border-radius:6px;padding:.4rem .85rem;margin-bottom:.75rem;font-size:.78rem;font-weight:600;color:var(--red);">📗 Semestre 2</div>
+          ${cf2}
+        </div>
+      </div>
       ${actionBar}
     </form>`;
   },
@@ -913,7 +947,25 @@ const Staffing={
     // id may be 'null' string when adding new
     const isNew=(id===null||id==='null'||id===undefined);
     const resolvedId=isNew?Date.now():id;
-    const item={id:resolvedId,name:f.get('name'),lastName:f.get('lastName'),department:f.get('department'),teacherId:f.get('teacherId'),hoursPerWeek:f.get('hoursPerWeek'),email:f.get('email'),adminW:f.get('adminW'),coordCouns:f.get('coordCouns'),advCoAdv:f.get('advCoAdv'),headDept:f.get('headDept'),course1Grade:f.get('course1Grade'),course1:f.get('course1'),course2Grade:f.get('course2Grade'),course2:f.get('course2'),course3Grade:f.get('course3Grade'),course3:f.get('course3'),course4Grade:f.get('course4Grade'),course4:f.get('course4'),course5Grade:f.get('course5Grade'),course5:f.get('course5')};
+    const item={
+      id:resolvedId,name:f.get('name'),lastName:f.get('lastName'),
+      department:f.get('department'),teacherId:f.get('teacherId'),
+      hoursPerWeek:f.get('hoursPerWeek'),email:f.get('email'),
+      adminW:f.get('adminW'),coordCouns:f.get('coordCouns'),
+      advCoAdv:f.get('advCoAdv'),headDept:f.get('headDept'),
+      // SEM 1
+      s1_course1Grade:f.get('s1_course1Grade'),s1_course1:f.get('s1_course1'),
+      s1_course2Grade:f.get('s1_course2Grade'),s1_course2:f.get('s1_course2'),
+      s1_course3Grade:f.get('s1_course3Grade'),s1_course3:f.get('s1_course3'),
+      s1_course4Grade:f.get('s1_course4Grade'),s1_course4:f.get('s1_course4'),
+      s1_course5Grade:f.get('s1_course5Grade'),s1_course5:f.get('s1_course5'),
+      // SEM 2
+      s2_course1Grade:f.get('s2_course1Grade'),s2_course1:f.get('s2_course1'),
+      s2_course2Grade:f.get('s2_course2Grade'),s2_course2:f.get('s2_course2'),
+      s2_course3Grade:f.get('s2_course3Grade'),s2_course3:f.get('s2_course3'),
+      s2_course4Grade:f.get('s2_course4Grade'),s2_course4:f.get('s2_course4'),
+      s2_course5Grade:f.get('s2_course5Grade'),s2_course5:f.get('s2_course5')
+    };
     if(!isNew){const i=data.findIndex(x=>String(x.id)===String(resolvedId));if(i>-1)data[i]=item;else data.push(item);}else data.push(item);
     Store.set('staffingData',data);sendTeacher(item);App.closeModal();this.render();Directory.render();
     toast(isNew?'Teacher added ✓':'Teacher updated ✓');
