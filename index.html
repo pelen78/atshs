@@ -96,6 +96,10 @@
     .tc-courses{margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--border)}
     .tc-c-lbl{font-size:.65rem;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:.3rem}
     .cpill{display:inline-block;background:#f2f0ec;color:var(--muted);border-radius:3px;padding:2px 7px;font-size:.7rem;margin:2px 2px 0 0}
+    .cpill-s2{background:#fff0f2;color:var(--red)}
+    .sem-label{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;padding:2px 8px;border-radius:3px;display:inline-block;margin-bottom:3px}
+    .sem1-label{background:var(--acc-navy);color:var(--navy)}
+    .sem2-label{background:var(--acc-red);color:var(--red)}
 
     /* FORM */
     .form-group{margin-bottom:.9rem}
@@ -605,20 +609,36 @@ const Directory={
     const f=this.filter==='All Departments'?list:list.filter(t=>t.department===this.filter);
     if(!f.length){c.innerHTML='<p class="text-muted" style="font-size:.875rem;">No teachers found.</p>';return;}
     c.innerHTML=f.map(t=>{
-      const courses=[t.course1,t.course2,t.course3,t.course4,t.course5].filter(x=>x&&x.trim());
+      // Sem 1 courses (new format s1_course1..5, fallback to course1..5)
+      const sem1=[t.s1_course1,t.s1_course2,t.s1_course3,t.s1_course4,t.s1_course5].filter(x=>x&&x.trim());
+      const sem2=[t.s2_course1,t.s2_course2,t.s2_course3,t.s2_course4,t.s2_course5].filter(x=>x&&x.trim());
+      const legacyCourses=[t.course1,t.course2,t.course3,t.course4,t.course5].filter(x=>x&&x.trim());
+      const s1=sem1.length?sem1:legacyCourses;
+      const s2=sem2;
+      const hasCourses=s1.length||s2.length;
       return `<div class="tc">
         <div class="tc-top"><div class="tc-avatar">${initials(t.name,t.lastName)}</div><div><div class="tc-name">${t.name} ${t.lastName}</div><div class="tc-dept-txt">${t.department||'—'}</div></div></div>
         ${t.department?`<span class="dept-badge">${t.department}</span>`:''}
         <div class="tc-meta">
           ${t.teacherId?`<div><strong>ID</strong> ${t.teacherId}</div>`:''}
-          ${t.hoursPerWeek?`<div><strong>Hours/Week</strong> ${t.hoursPerWeek}</div>`:''}
+          ${t.hoursPerWeek?`<div><strong>H/Week</strong> ${t.hoursPerWeek}</div>`:''}
           ${t.adminW?`<div><strong>Admin W.</strong> ${t.adminW}</div>`:''}
           ${t.coordCouns?`<div><strong>Coord/Couns</strong> ${t.coordCouns}</div>`:''}
           ${t.advCoAdv?`<div><strong>Adv/Co-Adv</strong> ${t.advCoAdv}</div>`:''}
           ${t.headDept?`<div><strong>Head Dept</strong> ${t.headDept}</div>`:''}
         </div>
         ${t.email?`<a href="mailto:${t.email}" class="tc-email">✉ ${t.email}</a>`:''}
-        ${courses.length?`<div class="tc-courses"><div class="tc-c-lbl">Courses</div>${courses.map(c=>`<span class="cpill">${c}</span>`).join('')}</div>`:''}
+        ${hasCourses?`
+          <div class="tc-courses">
+            ${s1.length?`
+              <div class="sem-label sem1-label">📘 Sem 1</div>
+              <div>${s1.map(c=>`<span class="cpill">${c}</span>`).join('')}</div>
+            `:''}
+            ${s2.length?`
+              <div class="sem-label sem2-label" style="margin-top:${s1.length?'0.5rem':'0'}">📗 Sem 2</div>
+              <div>${s2.map(c=>`<span class="cpill cpill-s2">${c}</span>`).join('')}</div>
+            `:''}
+          </div>`:''}
       </div>`;
     }).join('');
   }
